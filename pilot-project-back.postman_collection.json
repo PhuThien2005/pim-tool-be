@@ -1,0 +1,109 @@
+{
+  "info": {
+    "_postman_id": "803eb3a6-f877-4bb7-bea3-10afeb876d4e",
+    "name": "pilot-project-back",
+    "description": "Postman collection to test the pilot-project-back Spring Boot application.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. GET /main",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/main",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["main"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "2. GET /projects/search?keyword=EFV",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/projects/search?keyword=EFV",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["projects", "search"],
+          "query": [
+            {
+              "key": "keyword",
+              "value": "EFV"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "3. GET /projects/{id}",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/projects/1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["projects", "1"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "4. POST /projects/{id} (Update Project)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"EFV Updated\",\n  \"customer\": \"ELCA Vietnam\",\n  \"finishingDate\": \"31/12/2026\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/projects/1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["projects", "1"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "5. POST /projects/update",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": 1,\n  \"name\": \"EFV Updated via /update\",\n  \"customer\": \"ELCA Vietnam\",\n  \"finishingDate\": \"31/12/2026\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/projects/update",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["projects", "update"]
+        }
+      },
+      "response": []
+    }
+  ]
+}

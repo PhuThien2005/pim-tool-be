@@ -1,12 +1,17 @@
 package vn.elca.training.web;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import vn.elca.training.model.dto.ProjectDto;
 import vn.elca.training.service.ProjectService;
-import vn.elca.training.util.ApplicationMapper;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -19,14 +24,48 @@ import java.util.stream.Collectors;
 @RequestMapping("/projects")
 public class ProjectController extends AbstractApplicationController {
 
-    @Autowired
     private ProjectService projectService;
 
-    @GetMapping("/search")
-    public List<ProjectDto> search() {
+    public ProjectController(ProjectService projectService) {
+        this.projectService = projectService;
+    }
+
+    @GetMapping({"", "/search"})
+    public List<ProjectDto> search(@RequestParam(value = "keyword", required = false) String keyword) {
+        if (StringUtils.isNotBlank(keyword)) {
+            return projectService.searchByKeyword(keyword);
+        }
         return projectService.findAll()
                 .stream()
                 .map(mapper::projectToProjectDto)
                 .collect(Collectors.toList());
+    }
+
+    @GetMapping({"/{id:\\d+}", "/id/{id:\\d+}"})
+    public ResponseEntity<ProjectDto> findById(@PathVariable("id") Long id) {
+        ProjectDto dto = projectService.findProjectById(id);
+        if (dto == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(dto);
+    }
+
+    @PostMapping({"", "/update", "/{id:\\d+}", "/update/{id:\\d+}"})
+    @PutMapping({"", "/update", "/{id:\\d+}", "/update/{id:\\d+}"})
+    public ResponseEntity<ProjectDto> updateProject(
+            @PathVariable(value = "id", required = false) Long pathId,
+            @RequestBody ProjectDto projectDto) {
+        if (projectDto == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        Long id = pathId != null ? pathId : projectDto.getId();
+        if (id == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        ProjectDto updated = projectService.updateProject(id, projectDto);
+        if (updated == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(updated);
     }
 }

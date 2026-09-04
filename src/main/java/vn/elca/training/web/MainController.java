@@ -1,5 +1,7 @@
 package vn.elca.training.web;
 
+import org.apache.catalina.core.ApplicationContext;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 
@@ -15,6 +17,11 @@ public class MainController extends AbstractApplicationController {
 
     private ProjectService projectService;
 
+    public  MainController(ProjectService projectService) {
+        this.projectService = projectService;
+    }
+
+    @Value("${application.title}")
     private String title;
 
     @Value("${application.message}")

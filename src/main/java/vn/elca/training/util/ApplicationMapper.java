@@ -20,10 +20,14 @@ public class ApplicationMapper {
     }
 
     public ProjectDto projectToProjectDto(Project entity) {
+        if (entity == null) {
+            return null;
+        }
         ProjectDto dto = new ProjectDto();
         dto.setId(entity.getId());
         dto.setName(entity.getName());
         dto.setFinishingDate(entity.getFinishingDate());
+        dto.setCustomer(entity.getCustomer());
 
         return dto;
     }
