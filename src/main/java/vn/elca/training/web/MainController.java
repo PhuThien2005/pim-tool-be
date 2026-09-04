@@ -17,7 +17,8 @@ public class MainController extends AbstractApplicationController {
 
     private ProjectService projectService;
 
-    public  MainController(ProjectService projectService) {
+    @Autowired
+    public void setProjectService(ProjectService projectService) {
         this.projectService = projectService;
     }
 

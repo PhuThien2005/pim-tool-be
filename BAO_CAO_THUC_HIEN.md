@@ -118,9 +118,10 @@ public class MainController extends AbstractApplicationController {
 #### 💥 Nguyên nhân 1 (NPE thứ nhất): `projectService` bị `null`
 * **Vấn đề:** Biến `projectService` trong `MainController` không có `@Autowired` và không có hàm dựng (Constructor Injection).
 * **Hậu quả:** Khi gọi `projectService.count()`, do `projectService` là `null` nên JVM ném `NullPointerException`.
-* **Cách khắc phục:** Thêm Constructor Injection vào `MainController`:
+* **Cách khắc phục:** Có thể dùng Constructor Injection hoặc Setter Injection. Trong mã nguồn đã áp dụng Setter Injection với `@Autowired`:
   ```java
-  public MainController(ProjectService projectService) {
+  @Autowired
+  public void setProjectService(ProjectService projectService) {
       this.projectService = projectService;
   }
   ```
