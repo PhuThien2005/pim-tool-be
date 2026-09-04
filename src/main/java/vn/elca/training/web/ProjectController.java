@@ -24,11 +24,8 @@ import java.util.stream.Collectors;
 @RequestMapping("/projects")
 public class ProjectController extends AbstractApplicationController {
 
+    @Autowired
     private ProjectService projectService;
-
-    public ProjectController(ProjectService projectService) {
-        this.projectService = projectService;
-    }
 
     @GetMapping({"", "/search"})
     public List<ProjectDto> search(@RequestParam(value = "keyword", required = false) String keyword) {
