@@ -278,8 +278,8 @@ public interface ProjectService {
 Trong [`ProjectController.java`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/main/java/vn/elca/training/web/ProjectController.java):
 1. **GET endpoint tìm theo ID:**
    ```java
-   @GetMapping({"/{id:\\d+}", "/id/{id:\\d+}"})
-   public ResponseEntity<ProjectDto> findById(@PathVariable("id") Long id) {
+   @GetMapping("/{id}")
+   public ResponseEntity<ProjectDto> findById(@PathVariable Long id) {
        ProjectDto dto = projectService.findProjectById(id);
        if (dto == null) {
            return ResponseEntity.notFound().build();
@@ -289,18 +289,8 @@ Trong [`ProjectController.java`](file:///C:/Users/dptn/IdeaProjects/pilot-projec
    ```
 2. **POST endpoint cập nhật project:**
    ```java
-   @PostMapping({"", "/update", "/{id:\\d+}", "/update/{id:\\d+}"})
-   @PutMapping({"", "/update", "/{id:\\d+}", "/update/{id:\\d+}"})
-   public ResponseEntity<ProjectDto> updateProject(
-           @PathVariable(value = "id", required = false) Long pathId,
-           @RequestBody ProjectDto projectDto) {
-       if (projectDto == null) {
-           return ResponseEntity.badRequest().build();
-       }
-       Long id = pathId != null ? pathId : projectDto.getId();
-       if (id == null) {
-           return ResponseEntity.badRequest().build();
-       }
+   @PostMapping("/{id}")
+   public ResponseEntity<ProjectDto> updateProject(@PathVariable Long id, @RequestBody ProjectDto projectDto) {
        ProjectDto updated = projectService.updateProject(id, projectDto);
        if (updated == null) {
            return ResponseEntity.notFound().build();

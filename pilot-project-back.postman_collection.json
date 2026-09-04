@@ -80,30 +80,6 @@
         }
       },
       "response": []
-    },
-    {
-      "name": "5. POST /projects/update",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"id\": 1,\n  \"name\": \"EFV Updated via /update\",\n  \"customer\": \"ELCA Vietnam\",\n  \"finishingDate\": \"31/12/2026\"\n}"
-        },
-        "url": {
-          "raw": "http://localhost:8080/projects/update",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "8080",
-          "path": ["projects", "update"]
-        }
-      },
-      "response": []
     }
   ]
 }
