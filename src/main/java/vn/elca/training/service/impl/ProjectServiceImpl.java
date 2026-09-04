@@ -35,7 +35,7 @@ public class ProjectServiceImpl implements ProjectService {
     @Override
     public List<ProjectDto> searchByKeyword(String keyword) {
         return projectRepository.findAll().stream()
-                .filter(p->p.getName().contains(keyword))
+                .filter(p-> p.getName() != null && p.getName().contains(keyword))
                 .map(mapper::projectToProjectDto)
                 .collect(Collectors.toList());
     }

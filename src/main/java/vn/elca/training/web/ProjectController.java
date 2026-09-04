@@ -6,7 +6,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -28,7 +27,7 @@ public class ProjectController extends AbstractApplicationController {
     @Autowired
     private ProjectService projectService;
 
-    @GetMapping({"", "/search"})
+    @GetMapping("/search")
     public List<ProjectDto> search(@RequestParam(value = "keyword", required = false) String keyword) {
         if (StringUtils.isNotBlank(keyword)) {
             return projectService.searchByKeyword(keyword);
@@ -39,8 +38,8 @@ public class ProjectController extends AbstractApplicationController {
                 .collect(Collectors.toList());
     }
 
-    @GetMapping({"/{id:\\d+}", "/id/{id:\\d+}"})
-    public ResponseEntity<ProjectDto> findById(@PathVariable("id") Long id) {
+    @GetMapping("/{id}")
+    public ResponseEntity<ProjectDto> findById(@PathVariable Long id) {
         ProjectDto dto = projectService.findProjectById(id);
         if (dto == null) {
             return ResponseEntity.notFound().build();
@@ -48,18 +47,8 @@ public class ProjectController extends AbstractApplicationController {
         return ResponseEntity.ok(dto);
     }
 
-    @PostMapping({"", "/update", "/{id:\\d+}", "/update/{id:\\d+}"})
-    @PutMapping({"", "/update", "/{id:\\d+}", "/update/{id:\\d+}"})
-    public ResponseEntity<ProjectDto> updateProject(
-            @PathVariable(value = "id", required = false) Long pathId,
-            @RequestBody ProjectDto projectDto) {
-        if (projectDto == null) {
-            return ResponseEntity.badRequest().build();
-        }
-        Long id = pathId != null ? pathId : projectDto.getId();
-        if (id == null) {
-            return ResponseEntity.badRequest().build();
-        }
+    @PostMapping("/{id}")
+    public ResponseEntity<ProjectDto> updateProject(@PathVariable Long id, @RequestBody ProjectDto projectDto) {
         ProjectDto updated = projectService.updateProject(id, projectDto);
         if (updated == null) {
             return ResponseEntity.notFound().build();
