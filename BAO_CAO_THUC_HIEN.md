@@ -186,9 +186,9 @@ Trước đó, trong [`ProjectController`](file:///C:/Users/dptn/IdeaProjects/pi
 `IllegalStateException: Ambiguous mapping. Cannot map 'projectController' method ... to {GET /projects/search}`.
 
 ### 4.3. Giải pháp cài đặt
-Gộp việc xử lý vào phương thức `@GetMapping({"", "/search"})` nhận tham số tùy chọn `keyword`:
+Gộp việc xử lý vào phương thức `@GetMapping("/search")` nhận tham số tùy chọn `keyword`:
 ```java
-@GetMapping({"", "/search"})
+@GetMapping("/search")
 public List<ProjectDto> search(@RequestParam(value = "keyword", required = false) String keyword) {
     if (StringUtils.isNotBlank(keyword)) {
         return projectService.searchByKeyword(keyword);
@@ -314,7 +314,6 @@ File Postman Collection v2.1 đã được tạo sẵn tại thư mục gốc d�
 | **2** | **Search by Keyword** | `GET` | `http://localhost:8080/projects/search?keyword=EFV` | Không có | `200 OK`<br>`[{"id":1,"name":"EFV","customer":"ELCA","finishingDate":"20/04/2020"}]` |
 | **3** | **Find Project by ID** | `GET` | `http://localhost:8080/projects/1` | Không có | `200 OK`<br>`{"id":1,"name":"EFV","customer":"ELCA","finishingDate":"20/04/2020"}` |
 | **4** | **Update Project by ID** | `POST` | `http://localhost:8080/projects/1` | `{"name":"EFV Dummy Updated","customer":"Dummy Customer ELCA","finishingDate":"15/11/2026"}` | `200 OK`<br>`{"id":1,"name":"EFV Dummy Updated","customer":"Dummy Customer ELCA","finishingDate":"15/11/2026"}` |
-| **5** | **Update via `/update`** | `POST` | `http://localhost:8080/projects/update` | `{"id":1,"name":"EFV Updated via /update","customer":"ELCA Vietnam","finishingDate":"31/12/2026"}` | `200 OK`<br>`{"id":1,"name":"EFV Updated via /update","customer":"ELCA Vietnam","finishingDate":"31/12/2026"}` |
 
 ### Hướng dẫn import vào Postman:
 1. Mở Postman.
