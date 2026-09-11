@@ -15,4 +15,6 @@ public interface ProjectService {
     long count();
     ProjectDto findProjectById(Long id);
     ProjectDto updateProject(Long id, ProjectDto projectDto);
+    Project createMaintenanceProject(Long oldProjectId) throws Exception;
+    Project createMaintenanceProjectWithException(Long oldProjectId, boolean simulateError) throws Exception;
 }

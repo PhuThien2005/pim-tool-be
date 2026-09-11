@@ -2,30 +2,23 @@ package vn.elca.training;
 
 import org.h2.server.web.WebServlet;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.PropertySource;
-import vn.elca.training.repository.TaskRepository;
-import vn.elca.training.validator.TaskValidator;
-import vn.elca.training.service.ProjectService;
-import vn.elca.training.util.ApplicationMapper;
-import vn.elca.training.web.AbstractApplicationController;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 /**
  * @author gtn
  *
  */
 @SpringBootApplication(scanBasePackages = "vn.elca.training")
-@ComponentScan(basePackageClasses = {
-        AbstractApplicationController.class,
-        ApplicationMapper.class,
-        ProjectService.class,
-        TaskValidator.class,
-        TaskRepository.class
-})
+@ComponentScan(basePackages = "vn.elca.training")
+@EnableJpaRepositories(basePackages = {"vn.elca.training.repository", "vn.elca.training.dao"})
+@EntityScan(basePackages = "vn.elca.training.model.entity")
 @PropertySource({"classpath:/application.properties", "classpath:/messages.properties"})
 public class ApplicationWebConfig extends SpringBootServletInitializer {
 

@@ -29,13 +29,13 @@ public class ProjectController extends AbstractApplicationController {
 
     @GetMapping("/search")
     public List<ProjectDto> search(@RequestParam(value = "keyword", required = false) String keyword) {
-        if (StringUtils.isNotBlank(keyword)) {
+//        if (StringUtils.isNotBlank(keyword)) {
             return projectService.searchByKeyword(keyword);
-        }
-        return projectService.findAll()
-                .stream()
-                .map(mapper::projectToProjectDto)
-                .collect(Collectors.toList());
+
+//        return projectService.findAll()
+//                .stream()
+//                .map(mapper::projectToProjectDto)
+//                .collect(Collectors.toList());
     }
 
     @GetMapping("/{id}")

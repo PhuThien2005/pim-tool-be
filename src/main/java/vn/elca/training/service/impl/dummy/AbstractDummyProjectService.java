@@ -88,4 +88,26 @@ public abstract class AbstractDummyProjectService {
         DUMMY_PROJECTS.put(id, existing);
         return new ProjectDto(existing.getId(), existing.getName(), existing.getCustomer(), existing.getFinishingDate());
     }
+
+    public Project createMaintenanceProject(Long oldProjectId) {
+        ProjectDto oldDto = DUMMY_PROJECTS.get(oldProjectId);
+        if (oldDto == null) {
+            throw new IllegalArgumentException("Project not found with id: " + oldProjectId);
+        }
+        int currentYear = LocalDate.now().getYear();
+        String maintName = String.format("%s Maint. %d", oldDto.getName(), currentYear);
+        long newId = System.currentTimeMillis();
+        ProjectDto maintDto = new ProjectDto(newId, maintName, oldDto.getCustomer(), LocalDate.now().plusYears(1));
+        DUMMY_PROJECTS.put(newId, maintDto);
+        Project p = new Project(newId, maintName, LocalDate.now().plusYears(1));
+        p.setCustomer(oldDto.getCustomer());
+        return p;
+    }
+
+    public Project createMaintenanceProjectWithException(Long oldProjectId, boolean simulateError) throws Exception {
+        if (simulateError) {
+            throw new RuntimeException("Simulated error in dummy service");
+        }
+        return createMaintenanceProject(oldProjectId);
+    }
 }

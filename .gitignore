@@ -51,3 +51,6 @@ target
 
 # Angular
 *.spec.ts
+
+# FastRequest plugin
+.fastRequest/
