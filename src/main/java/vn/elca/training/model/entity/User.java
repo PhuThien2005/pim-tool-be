@@ -4,7 +4,9 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import javax.persistence.*;
 import java.io.Serializable;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * @author gtn
@@ -28,6 +30,15 @@ public class User implements Serializable {
 
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
     private List<Task> tasks;
+
+    @OneToMany(mappedBy = "groupLeader", fetch = FetchType.LAZY)
+    private Set<Group> leadingGroups = new HashSet<>();
+
+    @OneToMany(mappedBy = "projectLeader", fetch = FetchType.LAZY)
+    private Set<Project> leadingProjects = new HashSet<>();
+
+    @ManyToMany(mappedBy = "members", fetch = FetchType.LAZY)
+    private Set<Project> projects = new HashSet<>();
 
     public User() {}
 
@@ -84,6 +95,30 @@ public class User implements Serializable {
 
     public void setTasks(List<Task> tasks) {
         this.tasks = tasks;
+    }
+
+    public Set<Group> getLeadingGroups() {
+        return leadingGroups;
+    }
+
+    public void setLeadingGroups(Set<Group> leadingGroups) {
+        this.leadingGroups = leadingGroups;
+    }
+
+    public Set<Project> getLeadingProjects() {
+        return leadingProjects;
+    }
+
+    public void setLeadingProjects(Set<Project> leadingProjects) {
+        this.leadingProjects = leadingProjects;
+    }
+
+    public Set<Project> getProjects() {
+        return projects;
+    }
+
+    public void setProjects(Set<Project> projects) {
+        this.projects = projects;
     }
 
     @Access(AccessType.PROPERTY)

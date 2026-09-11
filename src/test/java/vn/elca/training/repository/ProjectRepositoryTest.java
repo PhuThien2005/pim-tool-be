@@ -40,6 +40,10 @@ public class ProjectRepositoryTest {
     private UserRepository userRepository;
 
     private User createOrGetUser(String username, String role) {
+        User existing = userRepository.findUserByUsername(username);
+        if (existing != null) {
+            return existing;
+        }
         User user = new User(username, username, role);
         return userRepository.save(user);
     }
@@ -94,24 +98,28 @@ public class ProjectRepositoryTest {
      * - Group 2: Leader HNH
      *     + Project IOC CLIENT EXTRANET (PL: APL) -> Developers: HPN, BNN, PNH; QA: HUN
      *     + Project KSTA MIGRATION (PL: XHP) -> QA: QMV; Developer: VVT
+     *
+     * ĐẶC BIỆT LƯU Ý VỀ TÍNH CHẤT OBJECT GRAPH:
+     * - QMV là 1 User duy nhất: vừa là Group Leader của Group QMV, vừa là Quality Agent (Member) trong KSTA MIGRATION.
+     * - HNH là 1 User duy nhất: vừa là Group Leader của Group HNH, vừa là Quality Agent (Member) trong EFV.
      */
     @Test
     public void testSaveMultipleProjectsTree() {
         // ==========================================
         // CÂY 1: Nhóm do QMV làm Group Leader
         // ==========================================
-        User qmvGroupLeader = createOrGetUser("QMV_GL", "Group Leader");
-        Group groupQmv = groupRepository.save(new Group("Group QMV", qmvGroupLeader));
+        User qmv = createOrGetUser("QMV", "Group Leader");
+        Group groupQmv = groupRepository.save(new Group("Group QMV", qmv));
 
         // 1. Dự án EFV (PL: HTV)
         User plHtv = createOrGetUser("HTV", "Project Leader");
         User tqp = createOrGetUser("TQP", "Developer");
-        User hnhQa = createOrGetUser("HNH_QA", "Quality Agent");
+        User hnh = createOrGetUser("HNH", "Quality Agent");
         User nqn = createOrGetUser("NQN", "Developer");
 
         Project efv = new Project("EFV_TREE", LocalDate.of(2026, 6, 30), "ELCA", ProjectStatus.INP, groupQmv);
         efv.setProjectLeader(plHtv);
-        efv.setMembers(new HashSet<>(Arrays.asList(tqp, hnhQa, nqn)));
+        efv.setMembers(new HashSet<>(Arrays.asList(tqp, hnh, nqn)));
         projectRepository.save(efv);
 
         // 2. Dự án CXTRANET (PL: QKP)
@@ -136,9 +144,9 @@ public class ProjectRepositoryTest {
 
         // ==========================================
         // CÂY 2: Nhóm do HNH làm Group Leader
+        // Lưu ý: HNH chính là user đã tham gia làm Member (QA) ở dự án EFV phía trên!
         // ==========================================
-        User hnhGroupLeader = createOrGetUser("HNH_GL", "Group Leader");
-        Group groupHnh = groupRepository.save(new Group("Group HNH", hnhGroupLeader));
+        Group groupHnh = groupRepository.save(new Group("Group HNH", hnh));
 
         // 4. Dự án IOC CLIENT EXTRANET (PL: APL)
         User plApl = createOrGetUser("APL", "Project Leader");
@@ -154,12 +162,12 @@ public class ProjectRepositoryTest {
 
         // 5. Dự án KSTA MIGRATION (PL: XHP)
         User plXhp = createOrGetUser("XHP", "Project Leader");
-        User qmvQa = createOrGetUser("QMV_QA", "Quality Agent");
+        // Lưu ý: QMV chính là user làm Group Leader của Group QMV ở trên, tham gia làm Member (QA) ở đây!
         User vvt = createOrGetUser("VVT", "Developer");
 
         Project kstaMigration = new Project("KSTA_MIGRATION_TREE", LocalDate.of(2026, 10, 31), "KSTA", ProjectStatus.PLA, groupHnh);
         kstaMigration.setProjectLeader(plXhp);
-        kstaMigration.setMembers(new HashSet<>(Arrays.asList(qmvQa, vvt)));
+        kstaMigration.setMembers(new HashSet<>(Arrays.asList(qmv, vvt)));
         projectRepository.save(kstaMigration);
 
         em.flush();
@@ -171,12 +179,13 @@ public class ProjectRepositoryTest {
         // Xác minh Group 1
         Group savedGroup1 = groupRepository.findById(groupQmv.getId()).orElse(null);
         Assert.assertNotNull(savedGroup1);
-        Assert.assertEquals("QMV_GL", savedGroup1.getGroupLeader().getUsername());
+        Assert.assertEquals("QMV", savedGroup1.getGroupLeader().getUsername());
 
         Project savedEfv = projectRepository.findByNameContainingIgnoreCase("EFV_TREE").get(0);
         Assert.assertEquals("HTV", savedEfv.getProjectLeader().getUsername());
         Assert.assertEquals(3, savedEfv.getMembers().size());
         Assert.assertEquals("Group QMV", savedEfv.getGroup().getName());
+        Assert.assertTrue(savedEfv.getMembers().stream().anyMatch(u -> "HNH".equals(u.getUsername())));
 
         Project savedCxtranet = projectRepository.findByNameContainingIgnoreCase("CXTRANET_TREE").get(0);
         Assert.assertEquals("QKP", savedCxtranet.getProjectLeader().getUsername());
@@ -189,7 +198,7 @@ public class ProjectRepositoryTest {
         // Xác minh Group 2
         Group savedGroup2 = groupRepository.findById(groupHnh.getId()).orElse(null);
         Assert.assertNotNull(savedGroup2);
-        Assert.assertEquals("HNH_GL", savedGroup2.getGroupLeader().getUsername());
+        Assert.assertEquals("HNH", savedGroup2.getGroupLeader().getUsername());
 
         Project savedIoc = projectRepository.findByNameContainingIgnoreCase("IOC_CLIENT_EXTRANET_TREE").get(0);
         Assert.assertEquals("APL", savedIoc.getProjectLeader().getUsername());
@@ -198,6 +207,16 @@ public class ProjectRepositoryTest {
         Project savedKsta = projectRepository.findByNameContainingIgnoreCase("KSTA_MIGRATION_TREE").get(0);
         Assert.assertEquals("XHP", savedKsta.getProjectLeader().getUsername());
         Assert.assertEquals(2, savedKsta.getMembers().size());
+        Assert.assertTrue(savedKsta.getMembers().stream().anyMatch(u -> "QMV".equals(u.getUsername())));
+
+        // Xác minh Object Graph đa chiều: cùng 1 user QMV vừa là Leader Group 1, vừa là Member dự án ở Group 2
+        User reloadedQmv = userRepository.findUserByUsername("QMV");
+        Assert.assertEquals(1, reloadedQmv.getLeadingGroups().size());
+        Assert.assertTrue(reloadedQmv.getProjects().stream().anyMatch(p -> "KSTA_MIGRATION_TREE".equals(p.getName())));
+
+        User reloadedHnh = userRepository.findUserByUsername("HNH");
+        Assert.assertEquals(1, reloadedHnh.getLeadingGroups().size());
+        Assert.assertTrue(reloadedHnh.getProjects().stream().anyMatch(p -> "EFV_TREE".equals(p.getName())));
     }
 
     /**

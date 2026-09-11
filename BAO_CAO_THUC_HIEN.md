@@ -15,6 +15,7 @@ Tài liệu này tổng hợp toàn bộ các bước thực hiện, phân tích
 8. [Yêu cầu 8: Mở rộng ProjectRepositoryTest với 5 kiểm thử, Sơ đồ cây & H2 Web Console](#8-yêu-cầu-8-mở-rộng-projectrepositorytest-với-5-kiểm-thử-sơ-đồ-cây--h2-web-console)
 9. [Yêu cầu 9: Xây dựng tính năng Transactional trong ProjectService & Chứng minh "Truly Transactional"](#9-yêu-cầu-9-xây-dựng-tính-năng-transactional-trong-projectservice--chứng-minh-truly-transactional)
 10. [Yêu cầu 10: Tổng hợp kết quả thực thi kiểm thử toàn dự án](#10-yêu-cầu-10-tổng-hợp-kết-quả-thực-thi-kiểm-thử-toàn-dự-án)
+11. [Yêu cầu 11: Toàn cảnh Lộ trình JAVA-06.doc (Các bài toán đã làm & Các bài toán tiếp theo)](#11-yêu-cầu-11-toàn-cảnh-lộ-trình-java-06doc-các-bài-toán-đã-làm--các-bài-toán-tiếp-theo)
 
 ---
 
@@ -377,58 +378,70 @@ Tạo file kiểm thử [`GroupRepositoryTest.java`](file:///C:/Users/dptn/IdeaP
 > * To verify a complex query written in QueryDSL to query projects based on their own and relations’ attributes (i.e. name, status + group’s and customer’s attributes).
 > * Verify your created tables by accessing the H2 database at: `localhost:8080/h2console` with data source url `jdbc:h2:mem:onboardingexercise`.
 
-### 8.2. Nâng cấp Entity `Project` và sơ đồ thực thể
+### 8.2. Nâng cấp Entity `Project`, `User`, `Group` và sơ đồ thực thể chuẩn hóa
 
-Để đáp ứng các bài test trên và sơ đồ phân cấp tổ chức, `Project` được bổ sung các thuộc tính:
-1. `status` (`ProjectStatus` enum: `NEW`, `PLA`, `INP`, `FIN`, `CLOSED`): Trạng thái của dự án, lưu dạng chuỗi `@Enumerated(EnumType.STRING)`.
-2. `activated` (`Boolean`, mặc định `true`): Xác định dự án đang hoạt động hay đã kết thúc/chuyển giao bảo trì.
-3. `group` (`@ManyToOne` với `Group`): Nhóm quản lý dự án.
-4. `projectLeader` (`@ManyToOne` với `User` qua cột `project_leader_id`): Quản trị viên dự án (PL).
-5. `members` (`@ManyToMany` với `User` qua bảng liên kết `PROJECT_MEMBER`): Danh sách thành viên tham gia (Developers, Quality Agents).
-
+#### Sơ đồ Quan hệ Thực thể (ERD Diagram)
 ```mermaid
 erDiagram
-    PROJECT_GROUP ||--o{ PROJECT : "contains"
-    USER ||--o{ PROJECT_GROUP : "leads (Group Leader)"
-    USER ||--o{ PROJECT : "leads (Project Leader)"
-    PROJECT ||--o{ PROJECT_MEMBER : "has"
-    USER ||--o{ PROJECT_MEMBER : "assigned"
+    PROJECT_GROUP ||--o{ PROJECT : "contains (1-N)"
+    USER ||--o{ PROJECT_GROUP : "leads_group (1-N)"
+    USER ||--o{ PROJECT : "leads_project (1-N)"
+    PROJECT ||--o{ PROJECT_MEMBER : "has_members"
+    USER ||--o{ PROJECT_MEMBER : "joins_as_member"
     PROJECT ||--o{ TASK : "consists of"
     USER ||--o{ TASK : "assigned"
 
     PROJECT_GROUP {
-        bigint id PK
-        varchar name
-        bigint group_leader_id FK
+        bigint id PK "Khóa chính tự tăng"
+        varchar name "Tên Group (vd: Group QMV, Group HNH)"
+        bigint group_leader_id FK "Trỏ sang USER(id)"
     }
 
     PROJECT {
-        bigint id PK
-        varchar name
-        varchar status
-        boolean activated
-        varchar customer
-        date finishing_date
-        bigint group_id FK
-        bigint project_leader_id FK
+        bigint id PK "Khóa chính tự tăng"
+        varchar name "Tên dự án (vd: EFV, CXTRANET)"
+        varchar status "Trạng thái (NEW, PLA, INP, FIN, CLOSED)"
+        boolean activated "Trạng thái kích hoạt (default: true)"
+        varchar customer "Tên khách hàng (vd: ELCA, KSTA, IOC)"
+        date finishing_date "Ngày kết thúc dự án"
+        bigint group_id FK "Trỏ sang PROJECT_GROUP(id)"
+        bigint project_leader_id FK "Trỏ sang USER(id)"
     }
 
     USER {
-        bigint id PK
-        varchar username
-        varchar full_name
-        varchar role
+        bigint id PK "Khóa chính tự tăng"
+        varchar username UK "Mã định danh duy nhất (vd: QMV, HTV, HNH)"
+        varchar full_name "Họ và tên"
+        varchar role "Chức danh mặc định (Developer, QA, Group Leader)"
     }
 
     PROJECT_MEMBER {
-        bigint project_id PK, FK
-        bigint user_id PK, FK
+        bigint project_id PK, FK "Trỏ sang PROJECT(id)"
+        bigint user_id PK, FK "Trỏ sang USER(id)"
     }
 ```
 
+#### Phân tích cốt lõi về Thiết kế Object Graph & Sửa lỗi thiết kế cũ:
+1. **Một nhân sự (`User`) là một thực thể duy nhất:**
+   * Trong thực tế tổ chức và theo đúng sơ đồ cây phân cấp ở `pasted-image-9.png`:
+     * `QMV` là **cùng một nhân viên**: Nhân viên này vừa làm **Group Leader** của `Group QMV` (Cây 1), vừa tham gia dự án `KSTA MIGRATION` (Cây 2) với vai trò **Quality Agent** (Member).
+     * Tương tự, `HNH` là **cùng một nhân viên**: Nhân viên này vừa làm **Group Leader** của `Group HNH` (Cây 2), vừa tham gia dự án `EFV` (Cây 1) với vai trò **Quality Agent** (Member).
+   * **Sai lầm thiết kế cần khắc phục:** Việc tạo các bản ghi User giả lập tách biệt như `QMV_GL` / `QMV_QA` hay `HNH_GL` / `HNH_QA` là **phản mẫu (anti-pattern)** và vi phạm ràng buộc toàn vẹn duy nhất (`username UNIQUE`).
+   * **Thiết kế chuẩn hóa:**
+     * Hàm helper `createOrGetUser(username, role)` trước tiên tìm User đã có trong DB qua `userRepository.findUserByUsername(username)`. Nếu đã có thì tái sử dụng đúng đối tượng đó, nếu chưa có mới tạo mới.
+     * Nhờ đó, cùng một thực thể `User(username = "QMV")` được gắn vào cả `Group.groupLeader` và `Project.members`.
+
+2. **Ánh xạ hai chiều linh hoạt trong `User.java`:**
+   * `@OneToMany(mappedBy = "groupLeader", fetch = FetchType.LAZY) private Set<Group> leadingGroups;`: Tập hợp các Group mà User đang làm Leader.
+   * `@OneToMany(mappedBy = "projectLeader", fetch = FetchType.LAZY) private Set<Project> leadingProjects;`: Tập hợp các Project mà User đang làm Project Leader.
+   * `@ManyToMany(mappedBy = "members", fetch = FetchType.LAZY) private Set<Project> projects;`: Tập hợp các Project mà User tham gia với tư cách thành viên.
+   * Điều này thỏa mãn trọn vẹn tiêu chí chấm điểm khắt khe của ELCA: *"The way the object graph is created"* - dữ liệu đồ thị đối tượng được ánh xạ tự nhiên, nhất quán, không dư thừa.
+
+---
+
 ### 8.3. Chi tiết 5 Test Cases được bổ sung trong `ProjectRepositoryTest.java`
 
-File kiểm thử [`ProjectRepositoryTest.java`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/test/java/vn/elca/training/repository/ProjectRepositoryTest.java) được nâng cấp toàn diện:
+File kiểm thử [`ProjectRepositoryTest.java`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/test/java/vn/elca/training/repository/ProjectRepositoryTest.java) được chuẩn hóa và nâng cấp toàn diện:
 
 #### 1. `testSaveOneProject()`: Kiểm tra lưu một dự án đơn lẻ
 * Tạo thực thể `Project` với đầy đủ thông tin: tên `"PROJECT_SOLO"`, khách hàng `"CUSTOMER_SOLO"`, trạng thái `ProjectStatus.NEW`, `activated = true`.
@@ -436,21 +449,30 @@ File kiểm thử [`ProjectRepositoryTest.java`](file:///C:/Users/dptn/IdeaProje
 * Kiểm tra ID được sinh tự động và các trường dữ liệu được lưu chính xác trong database.
 
 #### 2. `testSaveMultipleProjectsTree()`: Lưu cấu trúc cây tổ chức phân cấp (`pasted-image-9.png`)
-Mô phỏng 100% chuẩn xác theo đúng hình ảnh cây phân cấp của đề bài:
+Mô phỏng 100% chuẩn xác theo đúng hình ảnh cây phân cấp của đề bài bằng cách tái sử dụng User thực thể duy nhất:
 
 * **Nhánh 1: Nhóm Leader `QMV` (`Group QMV`):**
-  * **Dự án `EFV`**: Project Leader là `HTV`; thành viên gồm `TQP` (Developer), `HNH` (Quality Agent), `NQN` (Developer).
-  * **Dự án `CXTRANET`**: Project Leader là `QKP`; thành viên gồm `PLH` (Quality Agent), `HNL` (Developer).
-  * **Dự án `CRYSTAL BALL`**: Project Leader là `MKN`; thành viên gồm `TBH` (Quality Agent), `TDN` (Developer).
+  * Tạo User `QMV` (`Group Leader`).
+  * Tạo `Group QMV` do `QMV` làm Leader.
+  * **Dự án `EFV`**: PL là `HTV`; thành viên gồm `TQP` (Dev), **`HNH`** (QA), `NQN` (Dev).
+  * **Dự án `CXTRANET`**: PL là `QKP`; thành viên gồm `PLH` (QA), `HNL` (Dev).
+  * **Dự án `CRYSTAL BALL`**: PL là `MKN`; thành viên gồm `TBH` (QA), `TDN` (Dev).
 
 * **Nhánh 2: Nhóm Leader `HNH` (`Group HNH`):**
-  * **Dự án `IOC CLIENT EXTRANET`**: Project Leader là `APL`; thành viên gồm `HPN` (Developer), `HUN` (Quality Agent), `BNN` (Developer), `PNH` (Developer).
-  * **Dự án `KSTA MIGRATION`**: Project Leader là `XHP`; thành viên gồm `QMV` (Quality Agent), `VVT` (Developer).
+  * Tái sử dụng chính User **`HNH`** (đã tạo ở dự án EFV phía trên) để làm Group Leader cho `Group HNH`!
+  * **Dự án `IOC CLIENT EXTRANET`**: PL là `APL`; thành viên gồm `HPN` (Dev), `HUN` (QA), `BNN` (Dev), `PNH` (Dev).
+  * **Dự án `KSTA MIGRATION`**: PL là `XHP`; thành viên gồm **`QMV`** (tái sử dụng chính User QMV làm Group Leader ở Nhánh 1!) và `VVT` (Dev).
 
 * **Xác minh đồ thị đối tượng (Object Graph Verification):**
-  * Kiểm tra đúng 5 dự án thuộc về đúng 2 Group tương ứng.
-  * Kiểm tra đúng chức vụ của Project Leader qua `project.getProjectLeader().getUsername()`.
-  * Kiểm tra đúng số lượng và danh tính thành viên tham gia qua `project.getMembers().size()`.
+  * Xác minh chiều thuận (Project $\rightarrow$ Leader/Member & Group $\rightarrow$ Leader):
+    * `groupQmv.getGroupLeader().getUsername() == "QMV"`.
+    * `savedEfv.getMembers()` chứa đúng User `HNH`.
+    * `savedKsta.getMembers()` chứa đúng User `QMV`.
+  * Xác minh chiều nghịch (User $\rightarrow$ Leading Groups & User $\rightarrow$ Projects):
+    * `reloadedQmv.getLeadingGroups()` có kích thước 1 (Group QMV).
+    * `reloadedQmv.getProjects()` chứa dự án `KSTA_MIGRATION_TREE`.
+    * `reloadedHnh.getLeadingGroups()` có kích thước 1 (Group HNH).
+    * `reloadedHnh.getProjects()` chứa dự án `EFV_TREE`.
 
 #### 3. `testDeleteProject()`: Kiểm tra xóa một dự án
 * Lưu một dự án `"PROJECT_TO_DELETE"` vào cơ sở dữ liệu.
@@ -622,4 +644,80 @@ mvn test
 | **TỔNG CỘNG** | **Toàn bộ Test Suite** | **20 Passed / 1 Skipped / 0 Failed / 0 Errors** | **BUILD SUCCESS** | **~24.09 s** |
 
 Toàn bộ các yêu cầu từ cấu hình Repository, QueryDSL nâng cao, cấu trúc dữ liệu cây tổ chức, đến quản lý Transaction và chứng minh tính toàn vẹn hệ thống đều đã hoàn thành xuất sắc và vượt qua 100% các bài kiểm thử tự động.
+
+---
+
+## 11. Yêu cầu 11: Toàn cảnh Lộ trình `JAVA-06.doc` (Các bài toán đã làm & Các bài toán tiếp theo)
+
+Qua đối chiếu trực tiếp với toàn bộ 366 đoạn văn trong tài liệu huấn luyện [**`JAVA-06.doc`**](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/JAVA-06.doc), toàn bộ chương trình huấn luyện Hibernate/Spring Data JPA của ELCA gồm **16 bài toán thực hành**.
+
+Nhánh **`feature/group-repository-querydsl-transaction`** hiện tại đã hoàn thiện xuất sắc và chuẩn hóa **9 bài toán nền tảng đầu tiên**.
+
+### 11.1. Bảng đối chiếu hiện trạng toàn bộ 16 bài toán trong `JAVA-06.doc`
+
+| STT | Bài toán trong `JAVA-06.doc` | Module / Class liên quan | Trạng thái trên nhánh này | Ghi chú & Điểm cốt lõi |
+|:---:|---|---|:---:|---|
+| **1** | **Setup Environment & Build Project** | `pom.xml`, Maven lifecycle | **ĐÃ HOÀN THÀNH** | Sửa `pom.xml`, build thành công `BUILD SUCCESS`. |
+| **2** | **Fix TaskRepository Naming Convention** | `TaskRepositoryImpl.java` | **ĐÃ HOÀN THÀNH** | Đổi tên từ `RenameThisClass` thành `TaskRepositoryImpl`. |
+| **3** | **Fix 3 NullPointerException at `/main`** | `ProjectController.java` | **ĐÃ HOÀN THÀNH** | Sửa Autowired, String.format và xử lý null. |
+| **4** | **GET search Project by keyword** | `ProjectController`, `ProjectService` | **ĐÃ HOÀN THÀNH** | Tìm kiếm theo tên hoặc khách hàng. |
+| **5** | **Dummy Project Service & Update Project** | `FirstDummyProjectServiceImpl`, `@Profile("dummy")` | **ĐÃ HOÀN THÀNH** | GET theo ID và POST cập nhật dữ liệu bộ nhớ. |
+| **6** | **Postman Collection** | `pilot-project-back.postman_collection.json` | **ĐÃ HOÀN THÀNH** | Bộ sưu tập 4 request v2.1 kiểm thử toàn diện API. |
+| **7** | **Entity `Group` & `GroupRepository`** | `Group.java`, `GroupRepository.java`, `GroupRepositoryTest.java` | **ĐÃ HOÀN THÀNH** | Map bảng `PROJECT_GROUP`, package `vn.elca.training.dao`. |
+| **8** | **Cây phân cấp dữ liệu & QueryDSL nâng cao** | `ProjectRepositoryTest.java`, `Project.java`, `User.java` | **ĐÃ HOÀN THÀNH (ĐÃ CHUẨN HÓA)** | 5 Test cases: Save 1, Cây phân cấp chuẩn (tái sử dụng 1 User duy nhất cho QMV và HNH), Delete, QueryDSL đơn giản, QueryDSL phức tạp JOIN. |
+| **9** | **Spring Transaction trong `ProjectService`** | `ProjectServiceImpl.java`, `ProjectServiceTransactionTest.java` | **ĐÃ HOÀN THÀNH** | Tạo bảo trì `createMaintenanceProject`, vô hiệu hóa dự án cũ, 4 cách chứng minh Truly Transactional. |
+| **10** | **Xử lý `LazyInitializationException`** | `TaskServiceTest.testListNumberOfTasks` | **TIẾP THEO (CHƯA LÀM)** | Mở `@Ignore` trong `TaskServiceTest`, giải quyết Lazy loading của `Project.tasks`. |
+| **11** | **Khắc phục "SELECT N + 1" (Phần 1)** | `TaskServiceTest.testShowProjectNameOfTopTenNewTasks` | **TIẾP THEO (CHƯA LÀM)** | Loại bỏ N+1 queries khi lấy danh sách Project name từ top 10 task. |
+| **12** | **Khắc phục "SELECT N + 1" (Phần 2)** | `TaskServiceTest.testListTasksByIds` | **TIẾP THEO (CHƯA LÀM)** | Tối ưu truy vấn danh sách Task theo IDs trong `TaskServiceImpl`. |
+| **13** | **Vi phạm Single-Unit-of-Work Pattern** | `TaskServiceTest.testUpdateDeadline` | **TIẾP THEO (CHƯA LÀM)** | Đảm bảo dữ liệu Task được rollback khi ném exception cập nhật deadline. |
+| **14** | **Lưu vết Audit Log khi Task thất bại** | `TaskServiceTest.testCreateTaskForProject` | **TIẾP THEO (CHƯA LÀM)** | Sử dụng `Propagation.REQUIRES_NEW` để commit Audit Log độc lập. |
+| **15** | **Khắc phục lỗi thêm Task cho User** | `POST /users/{username}/addTasks` | **TIẾP THEO (CHƯA LÀM)** | Đồng bộ quan hệ 2 chiều giữa User và Task trong persistence context. |
+| **16** | **Xử lý vòng lặp đệ quy Jackson JSON** | `GET /users/id/{id}` | **TIẾP THEO (CHƯA LÀM)** | Xử lý quan hệ 2 chiều tránh lặp vô tận khi serialize JSON. |
+
+---
+
+### 11.2. Phân tích chi tiết và Hướng dẫn giải pháp cho các bài toán tiếp theo (10 $\rightarrow$ 16)
+
+#### Bài 10: Xử lý `LazyInitializationException` (`TaskServiceTest.testListNumberOfTasks`)
+* **Yêu cầu:** Bỏ annotation `@Ignore` ở đầu class [`TaskServiceTest.java`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/test/java/vn/elca/training/service/TaskServiceTest.java). Chạy `testListNumberOfTasks`.
+* **Hiện tượng:** Truy vấn tất cả Project có task tên `"Task 1"`. Sau đó duyệt qua từng Project để đếm số lượng task (`project.getTasks().size()`). Ném lỗi `LazyInitializationException` vì `Project.tasks` là `LAZY`, phiên làm việc Hibernate (Session/EntityManager) đã đóng sau câu query ban đầu.
+* **Quy định đề bài:** Không được sửa `TaskServiceTest`, không được đổi mapping `tasks` trong `Project` thành `EAGER`.
+* **Giải pháp chuẩn:** Trong tầng DAO/Repository (hoặc Service query), sử dụng **`JOIN FETCH`** trong QueryDSL / JPQL hoặc **`@EntityGraph(attributePaths = {"tasks"})`** để nạp sẵn (fetch) tập hợp `tasks` cùng lúc với `Project` trong đúng 1 query.
+
+#### Bài 11 & 12: Khắc phục bài toán "SELECT N + 1"
+* **Hiện tượng:**
+  * Tại `testShowProjectNameOfTopTenNewTasks`: Phương thức `showProjectNameOfTopTenNewTasks` thực hiện 1 câu query lấy 10 Task mới nhất. Sau đó, với mỗi task, Hibernate lại phát sinh thêm 1 câu query `select project from project where id = ?` $\rightarrow$ Phát sinh $1 + 10 = 11$ câu truy vấn vào DB.
+  * Tại `testListTasksByIds`: Code trong `TaskServiceImpl` dùng vòng lặp duyệt qua từng `id` và gọi `taskRepository.findById(id)`.
+* **Giải pháp chuẩn:**
+  * Với Bài 11: Dùng QueryDSL **Projection** hoặc `JOIN FETCH`:
+    ```java
+    new JPAQuery<String>(em)
+        .from(qTask)
+        .innerJoin(qTask.project, qProject)
+        .orderBy(qTask.id.desc())
+        .limit(10)
+        .select(qProject.name)
+        .fetch();
+    ```
+    Chỉ chạy duy nhất 1 câu SQL `SELECT p.name FROM task t INNER JOIN project p ON t.project_id = p.id ORDER BY t.id DESC LIMIT 10`.
+  * Với Bài 12: Thay thế vòng lặp bằng câu lệnh đơn `taskRepository.findAllById(ids)` hoặc QueryDSL `qTask.id.in(ids)`.
+
+#### Bài 13: Xử lý vi phạm nguyên lý Single-Unit-of-Work (`testUpdateDeadline`)
+* **Hiện tượng:** Khi gọi `taskService.updateDeadline(taskId, newDeadline)`, nếu deadline không hợp lệ thì ném `DeadlineAfterFinishingDateException`. Tuy nhiên trong DB, deadline của Task vẫn bị thay đổi (không được rollback).
+* **Nguyên nhân:** Phương thức trong `TaskServiceImpl` chưa được bọc `@Transactional(rollbackFor = Exception.class)`. Mặc định của Spring chỉ rollback đối với `RuntimeException`, nếu exception kế thừa từ `Exception` (checked exception) thì Spring không tự động rollback.
+* **Giải pháp chuẩn:** Bổ sung `@Transactional(rollbackFor = Throwable.class)` ở cấp Service method hoặc Service class.
+
+#### Bài 14: Đảm bảo Audit Log được lưu độc lập (`testCreateTaskForProject`)
+* **Nghiệp vụ đề bài:** Khi tạo Task cho một Project, nếu có lỗi phát sinh thì toàn bộ dữ liệu tạo Task phải bị rollback, NHƯNG bản ghi Audit Log ghi lại hành động của Admin **bắt buộc phải được lưu vào database** để phục vụ kiểm toán truy vết.
+* **Nguyên nhân lỗi hiện tại:** Cả việc tạo task và ghi audit log đang dùng chung 1 Transaction. Khi có exception ném ra, Transaction bị rollback làm cho audit log cũng bị rollback theo.
+* **Giải pháp chuẩn:** Tách service ghi Audit Log (ví dụ `TaskAuditService.logAudit(...)`) ra một bean riêng và đánh dấu với:
+  ```java
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  ```
+  `REQUIRES_NEW` sẽ tạm dừng transaction hiện tại và mở ra một transaction con hoàn toàn độc lập. Transaction con này commit ngay lập tức vào database, không bị ảnh hưởng khi transaction cha bị rollback!
+
+#### Bài 15 & 16: Sửa các lỗi Controller và REST API (`/users`)
+* **Bài 15 (`/users/{username}/addTasks`):** Trong `UserServiceImpl.addTasksToUser`, chỉ gán `task.setUser(user)` mà không thêm task vào `user.getTasks().add(task)` (hoặc ngược lại). Cần đồng bộ cả 2 đầu quan hệ đối tượng trong Java bộ nhớ trước khi lưu.
+* **Bài 16 (`/users/id/{id}`):** Controller trả về trực tiếp thực thể `User`. `User` chứa `List<Task>`, mỗi `Task` lại chứa `User`, dẫn đến Jackson serialize rơi vào vòng lặp vô tận (Infinite Recursion) $\rightarrow$ `StackOverflowError`. Giải pháp là chuyển sang trả về `UserDto` hoặc gắn `@JsonIgnoreProperties` / `@JsonIdentityInfo`.
+
 
