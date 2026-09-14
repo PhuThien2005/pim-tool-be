@@ -13,6 +13,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 
 import org.springframework.test.context.junit4.SpringRunner;
@@ -33,8 +34,7 @@ import vn.elca.training.repository.TaskRepository;
  */
 @ContextConfiguration(classes = {ApplicationWebConfig.class})
 @RunWith(value=SpringRunner.class)
-// please remove this annotation to do the Hibernate exercise
-@Ignore
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 public class TaskServiceTest {
 	@PersistenceContext
 	private EntityManager em;

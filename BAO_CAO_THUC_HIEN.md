@@ -666,58 +666,36 @@ Nhánh **`feature/group-repository-querydsl-transaction`** hiện tại đã ho�
 | **7** | **Entity `Group` & `GroupRepository`** | `Group.java`, `GroupRepository.java`, `GroupRepositoryTest.java` | **ĐÃ HOÀN THÀNH** | Map bảng `PROJECT_GROUP`, package `vn.elca.training.dao`. |
 | **8** | **Cây phân cấp dữ liệu & QueryDSL nâng cao** | `ProjectRepositoryTest.java`, `Project.java`, `User.java` | **ĐÃ HOÀN THÀNH (ĐÃ CHUẨN HÓA)** | 5 Test cases: Save 1, Cây phân cấp chuẩn (tái sử dụng 1 User duy nhất cho QMV và HNH), Delete, QueryDSL đơn giản, QueryDSL phức tạp JOIN. |
 | **9** | **Spring Transaction trong `ProjectService`** | `ProjectServiceImpl.java`, `ProjectServiceTransactionTest.java` | **ĐÃ HOÀN THÀNH** | Tạo bảo trì `createMaintenanceProject`, vô hiệu hóa dự án cũ, 4 cách chứng minh Truly Transactional. |
-| **10** | **Xử lý `LazyInitializationException`** | `TaskServiceTest.testListNumberOfTasks` | **TIẾP THEO (CHƯA LÀM)** | Mở `@Ignore` trong `TaskServiceTest`, giải quyết Lazy loading của `Project.tasks`. |
-| **11** | **Khắc phục "SELECT N + 1" (Phần 1)** | `TaskServiceTest.testShowProjectNameOfTopTenNewTasks` | **TIẾP THEO (CHƯA LÀM)** | Loại bỏ N+1 queries khi lấy danh sách Project name từ top 10 task. |
-| **12** | **Khắc phục "SELECT N + 1" (Phần 2)** | `TaskServiceTest.testListTasksByIds` | **TIẾP THEO (CHƯA LÀM)** | Tối ưu truy vấn danh sách Task theo IDs trong `TaskServiceImpl`. |
-| **13** | **Vi phạm Single-Unit-of-Work Pattern** | `TaskServiceTest.testUpdateDeadline` | **TIẾP THEO (CHƯA LÀM)** | Đảm bảo dữ liệu Task được rollback khi ném exception cập nhật deadline. |
-| **14** | **Lưu vết Audit Log khi Task thất bại** | `TaskServiceTest.testCreateTaskForProject` | **TIẾP THEO (CHƯA LÀM)** | Sử dụng `Propagation.REQUIRES_NEW` để commit Audit Log độc lập. |
-| **15** | **Khắc phục lỗi thêm Task cho User** | `POST /users/{username}/addTasks` | **TIẾP THEO (CHƯA LÀM)** | Đồng bộ quan hệ 2 chiều giữa User và Task trong persistence context. |
-| **16** | **Xử lý vòng lặp đệ quy Jackson JSON** | `GET /users/id/{id}` | **TIẾP THEO (CHƯA LÀM)** | Xử lý quan hệ 2 chiều tránh lặp vô tận khi serialize JSON. |
+| **10** | **Xử lý `LazyInitializationException`** | `TaskServiceTest.testListNumberOfTasks` | **ĐÃ HOÀN THÀNH** | Fetch join `tasks` với QueryDSL trong `TaskRepositoryImpl.findProjectsByTaskName`. |
+| **11** | **Khắc phục "SELECT N + 1" (Phần 1)** | `TaskServiceTest.testShowProjectNameOfTopTenNewTasks` | **ĐÃ HOÀN THÀNH** | Fetch join `project` trong `TaskRepositoryImpl.listRecentTasks`, giảm từ 11 về 1 câu query. |
+| **12** | **Khắc phục "SELECT N + 1" (Phần 2)** | `TaskServiceTest.testListTasksByIds` | **ĐÃ HOÀN THÀNH** | `taskRepository.findAllById(ids)` thay thế vòng lặp N câu query đơn lẻ. |
+| **13** | **Vi phạm Single-Unit-of-Work Pattern** | `TaskServiceTest.testUpdateDeadline` | **ĐÃ HOÀN THÀNH** | `@Transactional(rollbackFor = Throwable.class)` đảm bảo rollback khi gặp checked exception. |
+| **14** | **Lưu vết Audit Log khi Task thất bại** | `TaskServiceTest.testCreateTaskForProject` | **ĐÃ HOÀN THÀNH** | `@Transactional(propagation = Propagation.REQUIRES_NEW)` & `saveAndFlush` lưu audit độc lập. |
+| **15** | **Khắc phục lỗi thêm Task cho User** | `POST /users/{username}/addTasks` | **ĐÃ HOÀN THÀNH** | Đồng bộ cả 2 đầu: `task.setUser(user)`, `taskRepository.saveAll(tasks)`, `user.setTasks(tasks)`. |
+| **16** | **Xử lý vòng lặp đệ quy Jackson JSON** | `GET /users/id/{id}` | **ĐÃ HOÀN THÀNH** | Gắn `@JsonIgnore` trên `Task.user` và các tập hợp quan hệ của `User` triệt tiêu đệ quy vô tận. |
 
 ---
 
-### 11.2. Phân tích chi tiết và Hướng dẫn giải pháp cho các bài toán tiếp theo (10 $\rightarrow$ 16)
+### 11.2. Kết quả triển khai và xác thực toàn bộ các bài toán (10 $\rightarrow$ 16)
 
 #### Bài 10: Xử lý `LazyInitializationException` (`TaskServiceTest.testListNumberOfTasks`)
-* **Yêu cầu:** Bỏ annotation `@Ignore` ở đầu class [`TaskServiceTest.java`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/test/java/vn/elca/training/service/TaskServiceTest.java). Chạy `testListNumberOfTasks`.
-* **Hiện tượng:** Truy vấn tất cả Project có task tên `"Task 1"`. Sau đó duyệt qua từng Project để đếm số lượng task (`project.getTasks().size()`). Ném lỗi `LazyInitializationException` vì `Project.tasks` là `LAZY`, phiên làm việc Hibernate (Session/EntityManager) đã đóng sau câu query ban đầu.
-* **Quy định đề bài:** Không được sửa `TaskServiceTest`, không được đổi mapping `tasks` trong `Project` thành `EAGER`.
-* **Giải pháp chuẩn:** Trong tầng DAO/Repository (hoặc Service query), sử dụng **`JOIN FETCH`** trong QueryDSL / JPQL hoặc **`@EntityGraph(attributePaths = {"tasks"})`** để nạp sẵn (fetch) tập hợp `tasks` cùng lúc với `Project` trong đúng 1 query.
+* **Thực hiện:** Trong [`TaskRepositoryImpl.java`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/main/java/vn/elca/training/repository/custom/TaskRepositoryImpl.java), truy vấn lấy danh sách Project ID khớp điều kiện, sau đó sử dụng `.leftJoin(QProject.project.tasks, QTask.task).fetchJoin()` kết hợp `.distinct()` để nạp sẵn toàn bộ collection `tasks` mà không đổi `FetchType.LAZY` thành `EAGER` trong Entity.
+* **Kết quả:** Vượt qua assert `Assert.assertTrue(taskService.listNumberOfTasks(projectsByTaskName).size() > 0)`.
 
 #### Bài 11 & 12: Khắc phục bài toán "SELECT N + 1"
-* **Hiện tượng:**
-  * Tại `testShowProjectNameOfTopTenNewTasks`: Phương thức `showProjectNameOfTopTenNewTasks` thực hiện 1 câu query lấy 10 Task mới nhất. Sau đó, với mỗi task, Hibernate lại phát sinh thêm 1 câu query `select project from project where id = ?` $\rightarrow$ Phát sinh $1 + 10 = 11$ câu truy vấn vào DB.
-  * Tại `testListTasksByIds`: Code trong `TaskServiceImpl` dùng vòng lặp duyệt qua từng `id` và gọi `taskRepository.findById(id)`.
-* **Giải pháp chuẩn:**
-  * Với Bài 11: Dùng QueryDSL **Projection** hoặc `JOIN FETCH`:
-    ```java
-    new JPAQuery<String>(em)
-        .from(qTask)
-        .innerJoin(qTask.project, qProject)
-        .orderBy(qTask.id.desc())
-        .limit(10)
-        .select(qProject.name)
-        .fetch();
-    ```
-    Chỉ chạy duy nhất 1 câu SQL `SELECT p.name FROM task t INNER JOIN project p ON t.project_id = p.id ORDER BY t.id DESC LIMIT 10`.
-  * Với Bài 12: Thay thế vòng lặp bằng câu lệnh đơn `taskRepository.findAllById(ids)` hoặc QueryDSL `qTask.id.in(ids)`.
+* **Bài 11:** Trong `TaskRepositoryImpl.listRecentTasks`, thêm `.innerJoin(QTask.task.project, QProject.project).fetchJoin()`. Khi duyệt qua danh sách task và gọi `task.getProject().getName()`, không phát sinh thêm bất kỳ câu truy vấn `SELECT project` nào (1 query duy nhất).
+* **Bài 12:** Trong `TaskServiceImpl.listTasksById`, loại bỏ hoàn toàn vòng lặp `for` gọi `getTaskById(id)`. Sử dụng phương thức `taskRepository.findAllById(ids)` thực thi câu lệnh SQL đơn `WHERE id IN (...)`.
 
 #### Bài 13: Xử lý vi phạm nguyên lý Single-Unit-of-Work (`testUpdateDeadline`)
-* **Hiện tượng:** Khi gọi `taskService.updateDeadline(taskId, newDeadline)`, nếu deadline không hợp lệ thì ném `DeadlineAfterFinishingDateException`. Tuy nhiên trong DB, deadline của Task vẫn bị thay đổi (không được rollback).
-* **Nguyên nhân:** Phương thức trong `TaskServiceImpl` chưa được bọc `@Transactional(rollbackFor = Exception.class)`. Mặc định của Spring chỉ rollback đối với `RuntimeException`, nếu exception kế thừa từ `Exception` (checked exception) thì Spring không tự động rollback.
-* **Giải pháp chuẩn:** Bổ sung `@Transactional(rollbackFor = Throwable.class)` ở cấp Service method hoặc Service class.
+* **Thực hiện:** Bổ sung `@Transactional(rollbackFor = Throwable.class)` tại `TaskServiceImpl.java` và method `updateDeadline`. Vì `DeadlineAfterFinishingDateException` là checked exception kế thừa từ `Exception`, cấu hình `rollbackFor = Throwable.class` bảo đảm Spring AOP Transaction Interceptor kích hoạt cờ `setRollbackOnly()` khi exception bị ném ra.
+* **Kết quả:** Dữ liệu task trong database giữ nguyên hạn chót ban đầu, `testUpdateDeadline` hoàn toàn màu xanh.
 
 #### Bài 14: Đảm bảo Audit Log được lưu độc lập (`testCreateTaskForProject`)
-* **Nghiệp vụ đề bài:** Khi tạo Task cho một Project, nếu có lỗi phát sinh thì toàn bộ dữ liệu tạo Task phải bị rollback, NHƯNG bản ghi Audit Log ghi lại hành động của Admin **bắt buộc phải được lưu vào database** để phục vụ kiểm toán truy vết.
-* **Nguyên nhân lỗi hiện tại:** Cả việc tạo task và ghi audit log đang dùng chung 1 Transaction. Khi có exception ném ra, Transaction bị rollback làm cho audit log cũng bị rollback theo.
-* **Giải pháp chuẩn:** Tách service ghi Audit Log (ví dụ `TaskAuditService.logAudit(...)`) ra một bean riêng và đánh dấu với:
-  ```java
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
-  ```
-  `REQUIRES_NEW` sẽ tạm dừng transaction hiện tại và mở ra một transaction con hoàn toàn độc lập. Transaction con này commit ngay lập tức vào database, không bị ảnh hưởng khi transaction cha bị rollback!
+* **Thực hiện:** Trong [`AuditServiceImpl.java`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/main/java/vn/elca/training/service/impl/AuditServiceImpl.java), phương thức `saveAuditDataForTask` được cấu hình `@Transactional(propagation = Propagation.REQUIRES_NEW)` và `taskAuditRepository.saveAndFlush(taskAudit)`.
+* **Kết quả:** Khi task chính bị lỗi hạn chót và ném ngoại lệ làm rollback transaction chính, transaction con độc lập của Audit Log đã commit thành công vào DB. Cả 3 assert kiểm toán đều chính xác tuyệt đối.
 
 #### Bài 15 & 16: Sửa các lỗi Controller và REST API (`/users`)
-* **Bài 15 (`/users/{username}/addTasks`):** Trong `UserServiceImpl.addTasksToUser`, chỉ gán `task.setUser(user)` mà không thêm task vào `user.getTasks().add(task)` (hoặc ngược lại). Cần đồng bộ cả 2 đầu quan hệ đối tượng trong Java bộ nhớ trước khi lưu.
-* **Bài 16 (`/users/id/{id}`):** Controller trả về trực tiếp thực thể `User`. `User` chứa `List<Task>`, mỗi `Task` lại chứa `User`, dẫn đến Jackson serialize rơi vào vòng lặp vô tận (Infinite Recursion) $\rightarrow$ `StackOverflowError`. Giải pháp là chuyển sang trả về `UserDto` hoặc gắn `@JsonIgnoreProperties` / `@JsonIdentityInfo`.
+* **Bài 15 (`/users/{username}/addTasks`):** Trong [`UserServiceImpl.java`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/main/java/vn/elca/training/service/impl/UserServiceImpl.java), duyệt qua từng `Task` để gán `task.setUser(user)` (owning side), gọi `taskRepository.saveAll(tasks)` và gán `user.setTasks(tasks)`. Viết thêm test case `UserServiceTest.testAddTasksToUser_SyncBidirectionalRelationship` xác thực dữ liệu được cập nhật đúng khóa ngoại trong DB.
+* **Bài 16 (`/users/id/{id}`):** Gắn `@JsonIgnore` trên thuộc tính `user` trong [`Task.java`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/main/java/vn/elca/training/model/entity/Task.java) và các quan hệ `leadingGroups`, `leadingProjects`, `projects` trong [`User.java`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/main/java/vn/elca/training/model/entity/User.java). Viết test case `testUserJacksonSerialization_NoInfiniteRecursion` xác thực serialization hoàn toàn không còn lỗi `Infinite recursion` hay `StackOverflowError`.
 
 

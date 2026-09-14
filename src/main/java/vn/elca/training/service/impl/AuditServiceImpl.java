@@ -15,12 +15,12 @@
 
 package vn.elca.training.service.impl;
 
-import javax.transaction.Transactional;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import vn.elca.training.repository.TaskAuditRepository;
 import vn.elca.training.model.entity.Task;
@@ -34,7 +34,6 @@ import vn.elca.training.service.AuditService;
  *
  */
 @Service
-@Transactional
 public class AuditServiceImpl implements AuditService {
     private Log logger = LogFactory.getLog(getClass());
 
@@ -42,10 +41,11 @@ public class AuditServiceImpl implements AuditService {
     private TaskAuditRepository taskAuditRepository;
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void saveAuditDataForTask(Task task, AuditType auditType, Status status, String message) {
         try {
             TaskAudit taskAudit = new TaskAudit(task, auditType, status, message);
-            taskAuditRepository.save(taskAudit);
+            taskAuditRepository.saveAndFlush(taskAudit);
         } catch (Exception e) {
             // it's OK to log exception here because this is only audit data, it contains information for tracing error
             // not business.

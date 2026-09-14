@@ -45,7 +45,13 @@ public class UserServiceImpl implements UserService {
     public User addTasksToUser(List<Long> taskIds, String username) {
         List<Task> tasks = taskRepository.findAllById(taskIds);
         User user = findOne(username);
-        user.setTasks(tasks);
+        if (user != null) {
+            for (Task task : tasks) {
+                task.setUser(user);
+            }
+            taskRepository.saveAll(tasks);
+            user.setTasks(tasks);
+        }
 
         return user;
     }

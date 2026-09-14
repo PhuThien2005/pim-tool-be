@@ -1,5 +1,6 @@
 package vn.elca.training.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import javax.persistence.*;
@@ -32,12 +33,15 @@ public class User implements Serializable {
     private List<Task> tasks;
 
     @OneToMany(mappedBy = "groupLeader", fetch = FetchType.LAZY)
+    @JsonIgnore
     private Set<Group> leadingGroups = new HashSet<>();
 
     @OneToMany(mappedBy = "projectLeader", fetch = FetchType.LAZY)
+    @JsonIgnore
     private Set<Project> leadingProjects = new HashSet<>();
 
     @ManyToMany(mappedBy = "members", fetch = FetchType.LAZY)
+    @JsonIgnore
     private Set<Project> projects = new HashSet<>();
 
     public User() {}
