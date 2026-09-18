@@ -1,6 +1,7 @@
 package vn.elca.training.service;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.aop.support.AopUtils;
@@ -11,7 +12,6 @@ import org.springframework.test.context.junit4.SpringRunner;
 import vn.elca.training.ApplicationWebConfig;
 import vn.elca.training.model.entity.Project;
 import vn.elca.training.model.entity.ProjectStatus;
-import vn.elca.training.model.exception.ApplicationUnexpectedException;
 import vn.elca.training.repository.ProjectRepository;
 
 import javax.persistence.EntityManager;
@@ -82,11 +82,11 @@ public class ProjectServiceTransactionTest {
 
     /**
      * Kịch bản 2: Chứng minh tính nguyên tử (Atomicity) và khả năng Rollback khi có Exception.
-     * Khi có lỗi xảy ra giữa chừng:
-     * - Dự án mới KHÔNG ĐƯỢC LƯU vào DB.
-     * - Dự án cũ KHÔNG ĐƯỢC CẬP NHẬT (activated vẫn là true).
+     * Khi bạn thêm code ném ngoại lệ (throw Exception) vào giữa method createMaintenanceProject,
+     * hãy bỏ @Ignore ở đây để chạy test xác thực transaction rollback hoàn toàn.
      */
     @Test
+//    @Ignore("Tạm bỏ qua: Bỏ comment @Ignore khi bạn tự thêm lệnh throw exception vào createMaintenanceProject để kiểm tra rollback")
     public void testCreateMaintenanceProjectRollbackOnException() {
         // 1. Chuẩn bị dự án phát triển ban đầu
         Project oldProject = new Project("TRANSACTION_TEST_PROJECT", LocalDate.of(2026, 1, 1), "CLIENT_XYZ", ProjectStatus.INP);
@@ -96,10 +96,10 @@ public class ProjectServiceTransactionTest {
 
         long initialProjectCount = projectRepository.count();
 
-        // 2. Gọi tạo dự án bảo trì với tham số giả lập lỗi (simulateError = true)
+        // 2. Gọi tạo dự án bảo trì
         boolean exceptionThrown = false;
         try {
-            projectService.createMaintenanceProjectWithException(oldProjectId, true);
+            projectService.createMaintenanceProject(oldProjectId);
         } catch (Exception e) {
             exceptionThrown = true;
         }

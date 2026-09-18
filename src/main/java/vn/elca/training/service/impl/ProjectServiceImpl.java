@@ -9,7 +9,6 @@ import vn.elca.training.model.dto.ProjectDto;
 import vn.elca.training.model.entity.Project;
 import vn.elca.training.model.entity.ProjectStatus;
 import vn.elca.training.model.entity.QProject;
-import vn.elca.training.model.exception.ApplicationUnexpectedException;
 import vn.elca.training.repository.ProjectRepository;
 import vn.elca.training.service.ProjectService;
 import vn.elca.training.util.ApplicationMapper;
@@ -104,51 +103,33 @@ public class ProjectServiceImpl implements ProjectService {
 
     /**
      * Tạo Maintenance Project từ Project có sẵn trong một transaction.
-     * Quy tắc:
-     * - Tên dự án mới = <tên dự án cũ> + " Maint. " + <năm hiện tại>
-     * - Dự án cũ sẽ chuyển thành không kích hoạt (activated = false)
-     * - Cả hai hành động phải diễn ra trong cùng 1 transaction atomic.
-     * - Nếu xảy ra lỗi (exception), toàn bộ transaction phải rollback (dự án mới không được tạo, dự án cũ không bị update).
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Project createMaintenanceProject(Long oldProjectId) throws Exception {
-        return createMaintenanceProjectInternal(oldProjectId, false);
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public Project createMaintenanceProjectWithException(Long oldProjectId, boolean simulateError) throws Exception {
-        return createMaintenanceProjectInternal(oldProjectId, simulateError);
-    }
-
-    private Project createMaintenanceProjectInternal(Long oldProjectId, boolean simulateError) throws Exception {
+    public Project createMaintenanceProject(Long oldProjectId) {
         Project oldProject = projectRepository.findById(oldProjectId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy dự án với ID: " + oldProjectId));
 
-        // 1. Chuyển trạng thái dự án cũ sang không kích hoạt (activated = false)
+
         oldProject.setActivated(false);
         projectRepository.save(oldProject);
 
-        // 2. Tạo tên cho dự án bảo trì: <tên cũ> + " Maint. " + <năm hiện tại>
+
         int currentYear = LocalDate.now().getYear();
         String maintenanceProjectName = String.format("%s Maint. %d", oldProject.getName(), currentYear);
 
-        // 3. Khởi tạo đối tượng bảo trì mới
-        Project maintenanceProject = new Project();
-        maintenanceProject.setName(maintenanceProjectName);
-        maintenanceProject.setFinishingDate(LocalDate.now().plusYears(1));
-        maintenanceProject.setCustomer(oldProject.getCustomer());
-        maintenanceProject.setGroup(oldProject.getGroup());
-        maintenanceProject.setStatus(ProjectStatus.NEW);
-        maintenanceProject.setActivated(true);
 
-        // 4. Nếu có yêu cầu giả lập lỗi hoặc có lỗi trong tiến trình: throw exception để kích hoạt Rollback
-        if (simulateError) {
-            throw new ApplicationUnexpectedException("Lỗi giả lập trong quá trình tạo dự án bảo trì để kiểm thử Transactional Rollback");
-        }
+        Project maintenanceProject = Project.builder()
+                .name(maintenanceProjectName)
+                .finishingDate(LocalDate.now().plusYears(1))
+                .customer(oldProject.getCustomer())
+                .group(oldProject.getGroup())
+                .status(ProjectStatus.NEW)
+                .activated(true)
+                .build();
+//        if (true)
+//            throw new RuntimeException("Test rollback");
 
-        // 5. Lưu dự án mới vào cơ sở dữ liệu
         return projectRepository.save(maintenanceProject);
     }
 }

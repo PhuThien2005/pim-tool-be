@@ -81,14 +81,14 @@ Trong tiêu chí chấm điểm của ELCA Coach (đoạn 195–202 trong `JAVA-
 > *– The way the queries are written."*
 
 #### Điểm mấu chốt được sửa đổi:
-1. **Một nhân viên (`User`) là một thực thể duy nhất:**
+1. **Một nhân viên (`Employee`) là một thực thể duy nhất:**
    * Trong cây phân cấp tổ chức (`pasted-image-9.png`):
      * **`QMV`** là **cùng một cá nhân**: Cá nhân này vừa giữ vai trò **Group Leader** của `Group QMV` (Cây 1), vừa tham gia dự án `KSTA MIGRATION` (Cây 2) với tư cách là **Quality Agent** (Member).
      * **`HNH`** là **cùng một cá nhân**: Cá nhân này vừa giữ vai trò **Group Leader** của `Group HNH` (Cây 2), vừa tham gia dự án `EFV` (Cây 1) với tư cách là **Quality Agent** (Member).
    * **Lỗi thiết kế cũ cần khắc phục:** Việc tạo các User giả lập tách rời (`QMV_GL`, `QMV_QA`, `HNH_GL`, `HNH_QA`) là phản mẫu, vi phạm ràng buộc duy nhất `username` và không phản ánh đúng Object Graph.
    * **Giải pháp chuẩn hóa:**
      * Hàm helper `createOrGetUser(username, role)` trong test trước tiên tìm User đã có qua `userRepository.findUserByUsername(username)`. Nếu đã có thì tái sử dụng đúng đối tượng đó, nếu chưa có mới tạo mới.
-     * Nhờ đó, cùng một đối tượng `User` được liên kết tự nhiên vào nhiều vị trí khác nhau trong đồ thị thực thể.
+     * Nhờ đó, cùng một đối tượng `Employee` được liên kết tự nhiên vào nhiều vị trí khác nhau trong đồ thị thực thể.
 
 2. **Điều hướng hai chiều (Bidirectional Mapping) trong `User.java`:**
    ```java
@@ -190,26 +190,29 @@ File kiểm thử [`ProjectRepositoryTest.java`](file:///C:/Users/dptn/IdeaProje
 ### 5.2. Cài đặt trong `ProjectServiceImpl.java`
 ```java
 @Override
-@Transactional(rollbackFor = Throwable.class)
-public Project createMaintenanceProject(Long oldProjectId, boolean simulateError) {
+@Transactional(rollbackFor = Exception.class)
+public Project createMaintenanceProject(Long oldProjectId) {
     Project oldProject = projectRepository.findById(oldProjectId)
-            .orElseThrow(() -> new IllegalArgumentException("Project not found with id: " + oldProjectId));
+            .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy dự án với ID: " + oldProjectId));
 
+    // 1. Cập nhật dự án cũ sang inactive
     oldProject.setActivated(false);
     projectRepository.save(oldProject);
 
+    // 2. Tạo tên dự án bảo trì: <tên cũ> + " Maint. " + <năm hiện tại>
     int currentYear = LocalDate.now().getYear();
     String newProjectName = String.format("%s Maint. %d", oldProject.getName(), currentYear);
 
-    Project maintenanceProject = new Project(newProjectName, oldProject.getFinishingDate());
+    // 3. Khởi tạo đối tượng bảo trì mới
+    Project maintenanceProject = new Project();
+    maintenanceProject.setName(newProjectName);
+    maintenanceProject.setFinishingDate(LocalDate.now().plusYears(1));
     maintenanceProject.setCustomer(oldProject.getCustomer());
     maintenanceProject.setGroup(oldProject.getGroup());
     maintenanceProject.setStatus(ProjectStatus.NEW);
     maintenanceProject.setActivated(true);
 
-    if (simulateError) {
-        throw new ApplicationUnexpectedException("Lỗi giả lập để kích hoạt Rollback");
-    }
+    // (Khi cần test rollback thực nghiệm, có thể chèn: throw new RuntimeException("Test rollback");)
 
     return projectRepository.save(maintenanceProject);
 }
@@ -279,7 +282,7 @@ mvn test
 | 13 | **Vi phạm Single-Unit-of-Work** | **ĐÃ HOÀN THÀNH** | `TaskServiceTest.testUpdateDeadline` (`rollbackFor = Throwable.class`) |
 | 14 | **Lưu vết Audit Log độc lập** | **ĐÃ HOÀN THÀNH** | `testCreateTaskForProject` (`Propagation.REQUIRES_NEW`) |
 | 15 | **Khắc phục lỗi thêm Task cho User** | **ĐÃ HOÀN THÀNH** | Đồng bộ quan hệ 2 chiều (`task.setUser`, `user.setTasks`, `saveAll`) |
-| 16 | **Vòng lặp đệ quy Jackson JSON** | **ĐÃ HOÀN THÀNH** | `@JsonIgnore` trên `Task.user` & collection `User` |
+| 16 | **Vòng lặp đệ quy Jackson JSON** | **ĐÃ HOÀN THÀNH** | `@JsonIgnore` trên `Task.user` & collection `Employee` |
 
 ### 8.2. Chi tiết giải pháp kỹ thuật đã triển khai (10 $\rightarrow$ 16)
 1. **Bài 10 (`LazyInitializationException`):** Mở `@Ignore` trong `TaskServiceTest`. Trong `TaskRepositoryImpl.findProjectsByTaskName`, áp dụng QueryDSL `leftJoin(QProject.project.tasks, QTask.task).fetchJoin()` kết hợp `distinct()` để nạp sẵn toàn bộ danh sách `tasks` ngay trong truy vấn mà vẫn giữ nguyên quy định cấm đổi mapping `Project.tasks` thành `EAGER`.
@@ -289,4 +292,4 @@ mvn test
 3. **Bài 13 (Rollback khi có Exception):** Gắn `@Transactional(rollbackFor = Throwable.class)` ở cấp Service method `updateDeadline` và class `TaskServiceImpl`, đảm bảo khi xảy ra checked exception `DeadlineAfterFinishingDateException` thì toàn bộ thay đổi dữ liệu được rollback sạch sẽ.
 4. **Bài 14 (Audit Log với `REQUIRES_NEW`):** Cấu hình phương thức `AuditServiceImpl.saveAuditDataForTask` với `@Transactional(propagation = Propagation.REQUIRES_NEW)` và `saveAndFlush(taskAudit)`. Transaction con lưu audit log độc lập và commit ngay lập tức, không bị ảnh hưởng khi transaction cha ném `ApplicationUnexpectedException`.
 5. **Bài 15 (Đồng bộ quan hệ 2 chiều User - Task):** Trong `UserServiceImpl.addTasksToUser`, duyệt qua từng task để gán owning-side `task.setUser(user)`, gọi `taskRepository.saveAll(tasks)` và cập nhật `user.setTasks(tasks)`.
-6. **Bài 16 (Triệt tiêu đệ quy JSON):** Thêm annotation `@JsonIgnore` trên thuộc tính `user` của Entity `Task` và các tập hợp điều hướng trong `User`, loại bỏ hoàn toàn hiện tượng Jackson Infinite Recursion / `StackOverflowError`.
+6. **Bài 16 (Triệt tiêu đệ quy JSON):** Thêm annotation `@JsonIgnore` trên thuộc tính `user` của Entity `Task` và các tập hợp điều hướng trong `Employee`, loại bỏ hoàn toàn hiện tượng Jackson Infinite Recursion / `StackOverflowError`.

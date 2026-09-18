@@ -10,9 +10,9 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.transaction.annotation.Transactional;
 import vn.elca.training.ApplicationWebConfig;
 import vn.elca.training.model.dto.ProjectDto;
+import vn.elca.training.model.entity.Employee;
 import vn.elca.training.model.entity.Project;
 import vn.elca.training.model.entity.Task;
-import vn.elca.training.model.entity.User;
 import vn.elca.training.repository.ProjectRepository;
 import vn.elca.training.repository.TaskRepository;
 import vn.elca.training.repository.UserRepository;
@@ -45,7 +45,7 @@ public class ProjectQuerydslDemoTest {
     private Project prjKsta;
     private Project prjSecutix;
     private Project prjCustom;
-    private User devJohn;
+    private Employee devJohn;
 
     @Before
     public void setUp() {
@@ -55,7 +55,7 @@ public class ProjectQuerydslDemoTest {
         projectRepository.deleteAll();
 
         // 1. Tạo User
-        devJohn = new User();
+        devJohn = new Employee();
         devJohn.setUsername("john.doe");
         devJohn = userRepository.save(devJohn);
 

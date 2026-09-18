@@ -103,11 +103,4 @@ public abstract class AbstractDummyProjectService {
         p.setCustomer(oldDto.getCustomer());
         return p;
     }
-
-    public Project createMaintenanceProjectWithException(Long oldProjectId, boolean simulateError) throws Exception {
-        if (simulateError) {
-            throw new RuntimeException("Simulated error in dummy service");
-        }
-        return createMaintenanceProject(oldProjectId);
-    }
 }

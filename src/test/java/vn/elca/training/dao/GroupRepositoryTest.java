@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.elca.training.ApplicationWebConfig;
 import vn.elca.training.model.entity.Group;
 import vn.elca.training.model.entity.QGroup;
-import vn.elca.training.model.entity.User;
+import vn.elca.training.model.entity.Employee;
 import vn.elca.training.repository.UserRepository;
 
 import javax.persistence.EntityManager;
@@ -37,17 +37,17 @@ public class GroupRepositoryTest {
 
     @Test
     public void testSaveAndFindGroup() {
-        // Tạo User làm Group Leader
-        User leader = new User("QMV_LEADER", "QMV Leader", "Group Leader");
+
+        Employee leader = new Employee("QMV_LEADER", "QMV Leader", "Group Leader");
         leader = userRepository.save(leader);
 
-        // Tạo và lưu Group
+
         Group group = new Group("Group QMV", leader);
         Group savedGroup = groupRepository.save(group);
 
         Assert.assertNotNull("ID của Group phải được sinh tự động", savedGroup.getId());
 
-        // Tìm lại Group theo ID
+
         Optional<Group> foundGroupOpt = groupRepository.findById(savedGroup.getId());
         Assert.assertTrue("Phải tìm thấy Group vừa lưu", foundGroupOpt.isPresent());
 
@@ -59,13 +59,13 @@ public class GroupRepositoryTest {
 
     @Test
     public void testQueryGroupWithQueryDSL() {
-        User leader = new User("HNH_LEADER", "HNH Leader", "Group Leader");
+        Employee leader = new Employee("HNH_LEADER", "HNH Leader", "Group Leader");
         leader = userRepository.save(leader);
 
         Group group = new Group("Group HNH", leader);
         groupRepository.save(group);
 
-        // Truy vấn Group bằng QueryDSL
+
         Group queryResult = new JPAQuery<Group>(em)
                 .from(QGroup.group)
                 .where(QGroup.group.name.eq("Group HNH")
@@ -83,11 +83,11 @@ public class GroupRepositoryTest {
         Long groupId = savedGroup.getId();
         Assert.assertNotNull(groupId);
 
-        // Xóa Group
+
         groupRepository.delete(savedGroup);
         em.flush();
 
-        // Xác minh Group đã bị xóa
+
         Optional<Group> deletedOpt = groupRepository.findById(groupId);
         Assert.assertFalse("Group phải không còn tồn tại sau khi xóa", deletedOpt.isPresent());
     }

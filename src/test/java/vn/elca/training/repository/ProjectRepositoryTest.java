@@ -39,12 +39,12 @@ public class ProjectRepositoryTest {
     @Autowired
     private UserRepository userRepository;
 
-    private User createOrGetUser(String username, String role) {
-        User existing = userRepository.findUserByUsername(username);
+    private Employee createOrGetUser(String username, String role) {
+        Employee existing = userRepository.findUserByUsername(username);
         if (existing != null) {
             return existing;
         }
-        User user = new User(username, username, role);
+        Employee user = new Employee(username, username, role);
         return userRepository.save(user);
     }
 
@@ -69,7 +69,7 @@ public class ProjectRepositoryTest {
     }
 
     /**
-     * Test 1: Xác minh việc lưu 1 dự án qua ProjectRepository
+     * Test 1:
      */
     @Test
     public void testSaveOneProject() {
@@ -77,10 +77,10 @@ public class ProjectRepositoryTest {
         project.setActivated(true);
 
         Project savedProject = projectRepository.save(project);
-        Assert.assertNotNull("ID dự án phải được sinh tự động", savedProject.getId());
+        Assert.assertNotNull("ID dự án được sinh tự động", savedProject.getId());
 
         Optional<Project> foundOpt = projectRepository.findById(savedProject.getId());
-        Assert.assertTrue("Dự án phải tồn tại trong DB", foundOpt.isPresent());
+        Assert.assertTrue("Dự án tồn tại trong DB", foundOpt.isPresent());
 
         Project found = foundOpt.get();
         Assert.assertEquals("PROJECT_SOLO", found.getName());
@@ -90,7 +90,7 @@ public class ProjectRepositoryTest {
     }
 
     /**
-     * Test 2: Xác minh việc lưu nhiều dự án theo đúng sơ đồ cây trong pasted-image-9.png:
+     * Test 2:
      * - Group 1: Leader QMV
      *     + Project EFV (PL: HTV) -> Developers: TQP, NQN; QA: HNH
      *     + Project CXTRANET (PL: QKP) -> QA: PLH; Developer: HNL
@@ -99,23 +99,20 @@ public class ProjectRepositoryTest {
      *     + Project IOC CLIENT EXTRANET (PL: APL) -> Developers: HPN, BNN, PNH; QA: HUN
      *     + Project KSTA MIGRATION (PL: XHP) -> QA: QMV; Developer: VVT
      *
-     * ĐẶC BIỆT LƯU Ý VỀ TÍNH CHẤT OBJECT GRAPH:
-     * - QMV là 1 User duy nhất: vừa là Group Leader của Group QMV, vừa là Quality Agent (Member) trong KSTA MIGRATION.
-     * - HNH là 1 User duy nhất: vừa là Group Leader của Group HNH, vừa là Quality Agent (Member) trong EFV.
+     * - QMV là 1 User: vừa là Group Leader của Group QMV, vừa là Quality Agent (Member) trong KSTA MIGRATION.
+     * - HNH là 1 User: vừa là Group Leader của Group HNH, vừa là Quality Agent (Member) trong EFV.
      */
     @Test
     public void testSaveMultipleProjectsTree() {
-        // ==========================================
-        // CÂY 1: Nhóm do QMV làm Group Leader
-        // ==========================================
-        User qmv = createOrGetUser("QMV", "Group Leader");
+        // CÂY 1:QMV làm Group Leader
+        Employee qmv = createOrGetUser("QMV", "Group Leader");
         Group groupQmv = groupRepository.save(new Group("Group QMV", qmv));
 
         // 1. Dự án EFV (PL: HTV)
-        User plHtv = createOrGetUser("HTV", "Project Leader");
-        User tqp = createOrGetUser("TQP", "Developer");
-        User hnh = createOrGetUser("HNH", "Quality Agent");
-        User nqn = createOrGetUser("NQN", "Developer");
+        Employee plHtv = createOrGetUser("HTV", "Project Leader");
+        Employee tqp = createOrGetUser("TQP", "Developer");
+        Employee hnh = createOrGetUser("HNH", "Quality Agent");
+        Employee nqn = createOrGetUser("NQN", "Developer");
 
         Project efv = new Project("EFV_TREE", LocalDate.of(2026, 6, 30), "ELCA", ProjectStatus.INP, groupQmv);
         efv.setProjectLeader(plHtv);
@@ -123,9 +120,9 @@ public class ProjectRepositoryTest {
         projectRepository.save(efv);
 
         // 2. Dự án CXTRANET (PL: QKP)
-        User plQkp = createOrGetUser("QKP", "Project Leader");
-        User plh = createOrGetUser("PLH", "Quality Agent");
-        User hnl = createOrGetUser("HNL", "Developer");
+        Employee plQkp = createOrGetUser("QKP", "Project Leader");
+        Employee plh = createOrGetUser("PLH", "Quality Agent");
+        Employee hnl = createOrGetUser("HNL", "Developer");
 
         Project cxtranet = new Project("CXTRANET_TREE", LocalDate.of(2026, 7, 31), "ELCA", ProjectStatus.INP, groupQmv);
         cxtranet.setProjectLeader(plQkp);
@@ -133,27 +130,27 @@ public class ProjectRepositoryTest {
         projectRepository.save(cxtranet);
 
         // 3. Dự án CRYSTAL BALL (PL: MKN)
-        User plMkn = createOrGetUser("MKN", "Project Leader");
-        User tbh = createOrGetUser("TBH", "Quality Agent");
-        User tdn = createOrGetUser("TDN", "Developer");
+        Employee plMkn = createOrGetUser("MKN", "Project Leader");
+        Employee tbh = createOrGetUser("TBH", "Quality Agent");
+        Employee tdn = createOrGetUser("TDN", "Developer");
 
         Project crystalBall = new Project("CRYSTAL_BALL_TREE", LocalDate.of(2026, 8, 31), "ELCA", ProjectStatus.PLA, groupQmv);
         crystalBall.setProjectLeader(plMkn);
         crystalBall.setMembers(new HashSet<>(Arrays.asList(tbh, tdn)));
         projectRepository.save(crystalBall);
 
-        // ==========================================
+
         // CÂY 2: Nhóm do HNH làm Group Leader
-        // Lưu ý: HNH chính là user đã tham gia làm Member (QA) ở dự án EFV phía trên!
-        // ==========================================
+        // HNH là user đã tham gia làm Member (QA) ở dự án EFV phía trên
+
         Group groupHnh = groupRepository.save(new Group("Group HNH", hnh));
 
         // 4. Dự án IOC CLIENT EXTRANET (PL: APL)
-        User plApl = createOrGetUser("APL", "Project Leader");
-        User hpn = createOrGetUser("HPN", "Developer");
-        User hun = createOrGetUser("HUN", "Quality Agent");
-        User bnn = createOrGetUser("BNN", "Developer");
-        User pnh = createOrGetUser("PNH", "Developer");
+        Employee plApl = createOrGetUser("APL", "Project Leader");
+        Employee hpn = createOrGetUser("HPN", "Developer");
+        Employee hun = createOrGetUser("HUN", "Quality Agent");
+        Employee bnn = createOrGetUser("BNN", "Developer");
+        Employee pnh = createOrGetUser("PNH", "Developer");
 
         Project iocClient = new Project("IOC_CLIENT_EXTRANET_TREE", LocalDate.of(2026, 9, 30), "IOC", ProjectStatus.INP, groupHnh);
         iocClient.setProjectLeader(plApl);
@@ -161,9 +158,9 @@ public class ProjectRepositoryTest {
         projectRepository.save(iocClient);
 
         // 5. Dự án KSTA MIGRATION (PL: XHP)
-        User plXhp = createOrGetUser("XHP", "Project Leader");
-        // Lưu ý: QMV chính là user làm Group Leader của Group QMV ở trên, tham gia làm Member (QA) ở đây!
-        User vvt = createOrGetUser("VVT", "Developer");
+        Employee plXhp = createOrGetUser("XHP", "Project Leader");
+        // QMV là user làm Group Leader của Group QMV ở trên, tham gia làm Member (QA) ở đây
+        Employee vvt = createOrGetUser("VVT", "Developer");
 
         Project kstaMigration = new Project("KSTA_MIGRATION_TREE", LocalDate.of(2026, 10, 31), "KSTA", ProjectStatus.PLA, groupHnh);
         kstaMigration.setProjectLeader(plXhp);
@@ -173,9 +170,9 @@ public class ProjectRepositoryTest {
         em.flush();
         em.clear();
 
-        // ==========================================
+
         // KIỂM TRA TOÀN DIỆN DỮ LIỆU CÂY ĐÃ LƯU
-        // ==========================================
+
         // Xác minh Group 1
         Group savedGroup1 = groupRepository.findById(groupQmv.getId()).orElse(null);
         Assert.assertNotNull(savedGroup1);
@@ -210,17 +207,17 @@ public class ProjectRepositoryTest {
         Assert.assertTrue(savedKsta.getMembers().stream().anyMatch(u -> "QMV".equals(u.getUsername())));
 
         // Xác minh Object Graph đa chiều: cùng 1 user QMV vừa là Leader Group 1, vừa là Member dự án ở Group 2
-        User reloadedQmv = userRepository.findUserByUsername("QMV");
+        Employee reloadedQmv = userRepository.findUserByUsername("QMV");
         Assert.assertEquals(1, reloadedQmv.getLeadingGroups().size());
         Assert.assertTrue(reloadedQmv.getProjects().stream().anyMatch(p -> "KSTA_MIGRATION_TREE".equals(p.getName())));
 
-        User reloadedHnh = userRepository.findUserByUsername("HNH");
+        Employee reloadedHnh = userRepository.findUserByUsername("HNH");
         Assert.assertEquals(1, reloadedHnh.getLeadingGroups().size());
         Assert.assertTrue(reloadedHnh.getProjects().stream().anyMatch(p -> "EFV_TREE".equals(p.getName())));
     }
 
     /**
-     * Test 3: Xác minh việc xóa một dự án qua ProjectRepository
+     * Test 3: xóa một dự án qua ProjectRepository
      */
     @Test
     public void testDeleteProject() {
@@ -230,16 +227,16 @@ public class ProjectRepositoryTest {
         Assert.assertNotNull(id);
         Assert.assertTrue(projectRepository.findById(id).isPresent());
 
-        // Xóa dự án
+
         projectRepository.delete(saved);
         em.flush();
 
-        // Xác minh dự án đã bị xóa
+
         Assert.assertFalse("Dự án phải không còn trong cơ sở dữ liệu sau khi xóa", projectRepository.findById(id).isPresent());
     }
 
     /**
-     * Test 4: Xác minh truy vấn đơn giản bằng QueryDSL theo các thuộc tính riêng của Project (name và status)
+     * Test 4:
      */
     @Test
     public void testSimpleQueryDSLByNameAndStatus() {
@@ -269,7 +266,7 @@ public class ProjectRepositoryTest {
      */
     @Test
     public void testComplexQueryDSLWithRelations() {
-        User leader = createOrGetUser("COMPLEX_LEADER", "Group Leader");
+        Employee leader = createOrGetUser("COMPLEX_LEADER", "Group Leader");
         Group targetGroup = groupRepository.save(new Group("TARGET_GROUP", leader));
         Group otherGroup = groupRepository.save(new Group("OTHER_GROUP", leader));
 

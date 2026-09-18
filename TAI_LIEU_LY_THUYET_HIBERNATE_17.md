@@ -444,9 +444,9 @@ Khi gọi endpoint lấy thông tin User theo ID, ứng dụng bị treo và vă
 `java.lang.StackOverflowError` hoặc `JsonMappingException: Infinite recursion (StackOverflowError)`
 
 ### 2. Nguyên nhân
-* Endpoint `/users/id/{id}` trả về trực tiếp đối tượng thực thể JPA `User`.
-* `User` chứa thuộc tính `tasks` (danh sách `Task`).
-* Mỗi `Task` lại chứa thuộc tính ngược lại trỏ về `User`.
+* Endpoint `/users/id/{id}` trả về trực tiếp đối tượng thực thể JPA `Employee`.
+* `Employee` chứa thuộc tính `tasks` (danh sách `Task`).
+* Mỗi `Task` lại chứa thuộc tính ngược lại trỏ về `Employee`.
 * Thư viện chuyển đổi JSON mặc định của Spring Boot (Jackson ObjectMapper) hoạt động bằng cơ chế duyệt cây đệ quy qua các getter:
   ```
   User.getTasks() -> Task.getUser() -> User.getTasks() -> Task.getUser() -> ... (vô tận)
@@ -466,7 +466,7 @@ Khi gọi endpoint lấy thông tin User theo ID, ứng dụng bị treo và vă
 +------------------------------------+-----------------------------------------------+
 ```
 
-* **Giải pháp áp dụng trong dự án:** Gắn `@JsonIgnore` trên trường `Task.user` trong [`Task.java`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/main/java/vn/elca/training/model/entity/Task.java#L40) và các tập hợp quan hệ của [`User.java`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/main/java/vn/elca/training/model/entity/User.java#L33-L44) (`leadingGroups`, `leadingProjects`, `projects`). Khi Jackson serialize `User`, nó chỉ serialize các trường dữ liệu của `Task` (`id`, `name`, `deadline`) và dừng lại, không duyệt ngược lại `User`.
+* **Giải pháp áp dụng trong dự án:** Gắn `@JsonIgnore` trên trường `Task.user` trong [`Task.java`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/main/java/vn/elca/training/model/entity/Task.java#L40) và các tập hợp quan hệ của [`User.java`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/main/java/vn/elca/training/model/entity/User.java#L33-L44) (`leadingGroups`, `leadingProjects`, `projects`). Khi Jackson serialize `Employee`, nó chỉ serialize các trường dữ liệu của `Task` (`id`, `name`, `deadline`) và dừng lại, không duyệt ngược lại `Employee`.
 
 ---
 

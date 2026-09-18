@@ -341,7 +341,7 @@ File Postman Collection v2.1 đã được tạo sẵn tại thư mục gốc d�
    * Các thuộc tính của `Group`:
      * `id` (`Long`): Khóa chính sinh tự động (`@GeneratedValue(strategy = GenerationType.IDENTITY)`).
      * `name` (`String`): Tên nhóm dự án (ví dụ: `"Group QMV"`, `"Group HNH"`).
-     * `groupLeader` (`User`): Trưởng nhóm, quan hệ `@ManyToOne(fetch = FetchType.LAZY)` với bảng `USER` qua cột `group_leader_id`.
+     * `groupLeader` (`Employee`): Trưởng nhóm, quan hệ `@ManyToOne(fetch = FetchType.LAZY)` với bảng `USER` qua cột `group_leader_id`.
      * `projects` (`Set<Project>`): Danh sách các dự án trực thuộc nhóm, quan hệ `@OneToMany(mappedBy = "group", cascade = CascadeType.ALL, fetch = FetchType.LAZY)`.
 
 2. **Repository `GroupRepository` (`vn.elca.training.dao.GroupRepository`):**
@@ -378,7 +378,7 @@ Tạo file kiểm thử [`GroupRepositoryTest.java`](file:///C:/Users/dptn/IdeaP
 > * To verify a complex query written in QueryDSL to query projects based on their own and relations’ attributes (i.e. name, status + group’s and customer’s attributes).
 > * Verify your created tables by accessing the H2 database at: `localhost:8080/h2console` with data source url `jdbc:h2:mem:onboardingexercise`.
 
-### 8.2. Nâng cấp Entity `Project`, `User`, `Group` và sơ đồ thực thể chuẩn hóa
+### 8.2. Nâng cấp Entity `Project`, `Employee`, `Group` và sơ đồ thực thể chuẩn hóa
 
 #### Sơ đồ Quan hệ Thực thể (ERD Diagram)
 ```mermaid
@@ -422,7 +422,7 @@ erDiagram
 ```
 
 #### Phân tích cốt lõi về Thiết kế Object Graph & Sửa lỗi thiết kế cũ:
-1. **Một nhân sự (`User`) là một thực thể duy nhất:**
+1. **Một nhân sự (`Employee`) là một thực thể duy nhất:**
    * Trong thực tế tổ chức và theo đúng sơ đồ cây phân cấp ở `pasted-image-9.png`:
      * `QMV` là **cùng một nhân viên**: Nhân viên này vừa làm **Group Leader** của `Group QMV` (Cây 1), vừa tham gia dự án `KSTA MIGRATION` (Cây 2) với vai trò **Quality Agent** (Member).
      * Tương tự, `HNH` là **cùng một nhân viên**: Nhân viên này vừa làm **Group Leader** của `Group HNH` (Cây 2), vừa tham gia dự án `EFV` (Cây 1) với vai trò **Quality Agent** (Member).
@@ -571,17 +571,7 @@ Caller |  1. Bắt đầu Transaction (em.getTransaction().begin())             
 ```java
 @Override
 @Transactional(rollbackFor = Exception.class)
-public Project createMaintenanceProject(Long oldProjectId) throws Exception {
-    return createMaintenanceProjectInternal(oldProjectId, false);
-}
-
-@Override
-@Transactional(rollbackFor = Exception.class)
-public Project createMaintenanceProjectWithException(Long oldProjectId, boolean simulateError) throws Exception {
-    return createMaintenanceProjectInternal(oldProjectId, simulateError);
-}
-
-private Project createMaintenanceProjectInternal(Long oldProjectId, boolean simulateError) throws Exception {
+public Project createMaintenanceProject(Long oldProjectId) {
     Project oldProject = projectRepository.findById(oldProjectId)
             .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy dự án với ID: " + oldProjectId));
 
@@ -602,12 +592,9 @@ private Project createMaintenanceProjectInternal(Long oldProjectId, boolean simu
     maintenanceProject.setStatus(ProjectStatus.NEW);
     maintenanceProject.setActivated(true);
 
-    // 4. Giả lập phát sinh lỗi trong quá trình xử lý để kích hoạt Transactional Rollback
-    if (simulateError) {
-        throw new ApplicationUnexpectedException("Lỗi giả lập để kiểm tra cơ chế Rollback");
-    }
+    // (Khi muốn kiểm thử rollback thực nghiệm: chèn throw new RuntimeException("Test rollback");)
 
-    // 5. Lưu dự án mới vào cơ sở dữ liệu
+    // 4. Lưu dự án mới vào cơ sở dữ liệu
     return projectRepository.save(maintenanceProject);
 }
 ```
@@ -618,8 +605,8 @@ Các kiểm thử được đóng gói trong file [`ProjectServiceTransactionTes
 
 | STT | Phương pháp chứng minh | Bản chất kỹ thuật | Kết quả xác minh trong Test |
 |---|---|---|---|
-| **1** | **Chứng minh Thực nghiệm (Empirical Rollback Test)** | Khi `simulateError = true`, phương thức ném ra exception sau khi đã gọi `oldProject.setActivated(false)`. Kiểm tra DB: nếu không có transaction, `oldProject` sẽ bị lưu trạng thái `activated = false`. Nhờ có transaction, toàn bộ hành động bị rollback, `oldProject.isActivated()` trong DB vẫn là `true`, và dự án bảo trì không hề được thêm. | **ĐẠT (PASSED)**:<br>DB không thay đổi số lượng, `oldProject.isActivated() == true`. |
-| **2** | **Chứng minh Kiến trúc Spring Proxy (Architectural Proof)** | Sử dụng `AopUtils.isAopProxy(projectService)` và kiểm tra `projectService.getClass().getName()`. Kết quả cho thấy bean `projectService` được bọc bởi `vn.elca.training.service.impl.ProjectServiceImpl$$EnhancerBySpringCGLIB$$86b1f7b4`. | **ĐẠT (PASSED)**:<br>Class name chứa tiền tố Dynamic Proxy, xác nhận mọi cuộc gọi đều đi qua Proxy interceptor. |
+| **1** | **Chứng minh Thực nghiệm (Empirical Rollback Test)** | Khi chèn exception vào phương thức sau khi đã gọi `oldProject.setActivated(false)`. Kiểm tra DB: nếu không có transaction, `oldProject` sẽ bị lưu trạng thái `activated = false`. Nhờ có transaction, toàn bộ hành động bị rollback, `oldProject.isActivated()` trong DB vẫn là `true`, và dự án bảo trì không hề được thêm. | **ĐẠT (PASSED)**:<br>DB không thay đổi số lượng, `oldProject.isActivated() == true`. |
+| **2** | **Chứng minh Kiến trúc Spring Proxy (Architectural Proof)** | Sử dụng `AopUtils.isAopProxy(projectService)` và kiểm tra `projectService.getClass().getName()`. Kết quả cho thấy bean `projectService` được bọc bởi Spring Dynamic Proxy. | **ĐẠT (PASSED)**:<br>Class name chứa tiền tố Dynamic Proxy, xác nhận mọi cuộc gọi đều đi qua Proxy interceptor. |
 | **3** | **Chứng minh Tính nguyên tử (Atomicity Verification)** | Đảm bảo cả hai thao tác (Cập nhật dự án cũ + Thêm dự án mới) là một khối bất khả phân ly (All-or-Nothing). Hoặc cả hai cùng thành công ghi vào DB, hoặc không có thao tác nào được lưu. | **ĐẠT (PASSED)** |
 | **4** | **Chứng minh đối chứng qua cạm bẫy tự gọi (Self-Invocation Trap)** | Phân tích cơ chế bỏ qua Proxy khi gọi nội bộ `this.method()`. Chỉ ra tại sao việc gọi thông qua Spring Managed Bean Proxy là điều kiện tiên quyết để tính năng Transactional hoạt động. | **ĐẠT (PASSED)** |
 
@@ -672,7 +659,7 @@ Nhánh **`feature/group-repository-querydsl-transaction`** hiện tại đã ho�
 | **13** | **Vi phạm Single-Unit-of-Work Pattern** | `TaskServiceTest.testUpdateDeadline` | **ĐÃ HOÀN THÀNH** | `@Transactional(rollbackFor = Throwable.class)` đảm bảo rollback khi gặp checked exception. |
 | **14** | **Lưu vết Audit Log khi Task thất bại** | `TaskServiceTest.testCreateTaskForProject` | **ĐÃ HOÀN THÀNH** | `@Transactional(propagation = Propagation.REQUIRES_NEW)` & `saveAndFlush` lưu audit độc lập. |
 | **15** | **Khắc phục lỗi thêm Task cho User** | `POST /users/{username}/addTasks` | **ĐÃ HOÀN THÀNH** | Đồng bộ cả 2 đầu: `task.setUser(user)`, `taskRepository.saveAll(tasks)`, `user.setTasks(tasks)`. |
-| **16** | **Xử lý vòng lặp đệ quy Jackson JSON** | `GET /users/id/{id}` | **ĐÃ HOÀN THÀNH** | Gắn `@JsonIgnore` trên `Task.user` và các tập hợp quan hệ của `User` triệt tiêu đệ quy vô tận. |
+| **16** | **Xử lý vòng lặp đệ quy Jackson JSON** | `GET /users/id/{id}` | **ĐÃ HOÀN THÀNH** | Gắn `@JsonIgnore` trên `Task.user` và các tập hợp quan hệ của `Employee` triệt tiêu đệ quy vô tận. |
 
 ---
 

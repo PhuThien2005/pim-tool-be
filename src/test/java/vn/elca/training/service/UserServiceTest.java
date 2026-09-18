@@ -9,9 +9,10 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.transaction.annotation.Transactional;
 import vn.elca.training.ApplicationWebConfig;
+import vn.elca.training.model.dto.UserDto;
+import vn.elca.training.model.entity.Employee;
 import vn.elca.training.model.entity.Project;
 import vn.elca.training.model.entity.Task;
-import vn.elca.training.model.entity.User;
 import vn.elca.training.repository.ProjectRepository;
 import vn.elca.training.repository.TaskRepository;
 import vn.elca.training.repository.UserRepository;
@@ -45,7 +46,7 @@ public class UserServiceTest {
     @Test
     public void testAddTasksToUser_SyncBidirectionalRelationship() {
         // 1. Prepare User and Project with Tasks
-        User user = userRepository.save(new User("dev_user", "Developer"));
+        Employee user = userRepository.save(new Employee("dev_user", "Developer"));
         Project project = projectRepository.save(new Project("Project Alpha", LocalDate.now().plusYears(1)));
 
         Task task1 = taskRepository.save(new Task(project, "Dev Task 1"));
@@ -54,7 +55,7 @@ public class UserServiceTest {
         List<Long> taskIds = Arrays.asList(task1.getId(), task2.getId());
 
         // 2. Execute addTasksToUser
-        User updatedUser = userService.addTasksToUser(taskIds, "dev_user");
+        UserDto updatedUser = userService.addTasksToUser(taskIds, "dev_user");
         Assert.assertNotNull(updatedUser);
         Assert.assertEquals(2, updatedUser.getTasks().size());
 
@@ -76,13 +77,13 @@ public class UserServiceTest {
 
     @Test
     public void testUserJacksonSerialization_NoInfiniteRecursion() throws Exception {
-        User user = userRepository.save(new User("json_user", "Tester"));
+        Employee user = userRepository.save(new Employee("json_user", "Tester"));
         Project project = projectRepository.save(new Project("Project Beta", LocalDate.now().plusYears(1)));
         Task task = taskRepository.save(new Task(project, "Beta Task"));
 
         userService.addTasksToUser(Arrays.asList(task.getId()), "json_user");
 
-        User loadedUser = userService.findOne(user.getId());
+        Employee loadedUser = userService.findOne(user.getId());
         Assert.assertNotNull(loadedUser);
 
         // Verify that Jackson serializes User without StackOverflowError / infinite recursion

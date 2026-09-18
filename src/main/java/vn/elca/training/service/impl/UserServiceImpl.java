@@ -4,13 +4,17 @@ import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import vn.elca.training.model.dto.UserDto;
+import vn.elca.training.model.entity.Employee;
 import vn.elca.training.model.entity.Task;
-import vn.elca.training.model.entity.User;
+import vn.elca.training.model.exception.ApplicationUnexpectedException;
 import vn.elca.training.repository.TaskRepository;
 import vn.elca.training.repository.UserRepository;
 import vn.elca.training.service.UserService;
+import vn.elca.training.util.ApplicationMapper;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author gtn
@@ -25,9 +29,12 @@ public class UserServiceImpl implements UserService {
     @Autowired
     TaskRepository taskRepository;
 
+    @Autowired
+    ApplicationMapper applicationMapper;
+
     @Override
-    public User findOne(Long id) {
-        User user = userRepository.findById(id).orElse(null);
+    public Employee findOne(Long id) {
+        Employee user = userRepository.findById(id).orElse(null);
         if (user != null) {
             Hibernate.initialize(user.getTasks());
         }
@@ -37,27 +44,31 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User findOne(String usename) {
+    public Employee findOne(String usename) {
         return userRepository.findUserByUsername(usename);
     }
 
     @Override
-    public User addTasksToUser(List<Long> taskIds, String username) {
+    public UserDto addTasksToUser(List<Long> taskIds, String username) {
         List<Task> tasks = taskRepository.findAllById(taskIds);
-        User user = findOne(username);
+        if (tasks.isEmpty()) {
+            throw new ApplicationUnexpectedException("Tasks don't exists!");
+        }
+        Employee user = findOne(username);
         if (user != null) {
             for (Task task : tasks) {
                 task.setUser(user);
             }
             taskRepository.saveAll(tasks);
-            user.setTasks(tasks);
+            tasks.addAll(user.getTasks());
+            user.setTasks(tasks.stream().collect(Collectors.toSet()));
         }
 
-        return user;
+        return applicationMapper.userToUserDto(user);
     }
 
     @Override
-    public User update(User user) {
+    public Employee update(Employee user) {
         return userRepository.save(user);
     }
 }

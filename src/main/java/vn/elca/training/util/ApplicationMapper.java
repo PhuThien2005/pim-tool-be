@@ -4,9 +4,9 @@ import org.springframework.stereotype.Component;
 import vn.elca.training.model.dto.ProjectDto;
 import vn.elca.training.model.dto.TaskDto;
 import vn.elca.training.model.dto.UserDto;
+import vn.elca.training.model.entity.Employee;
 import vn.elca.training.model.entity.Project;
 import vn.elca.training.model.entity.Task;
-import vn.elca.training.model.entity.User;
 
 import java.util.stream.Collectors;
 
@@ -44,11 +44,16 @@ public class ApplicationMapper {
         return dto;
     }
 
-    public UserDto userToUserDto(User user) {
+    public UserDto userToUserDto(Employee user) {
+        if (user == null) {
+            return null;
+        }
         UserDto dto = new UserDto();
         dto.setId(user.getId());
         dto.setUsername(user.getUsername());
-        dto.setTasks(user.getTasks().stream().map(this::taskToTaskDto).collect(Collectors.toList()));
+        if (user.getTasks() != null) {
+            dto.setTasks(user.getTasks().stream().map(this::taskToTaskDto).collect(Collectors.toList()));
+        }
 
         return dto;
     }
