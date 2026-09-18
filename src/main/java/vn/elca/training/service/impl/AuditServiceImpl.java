@@ -23,10 +23,6 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import vn.elca.training.repository.TaskAuditRepository;
-import vn.elca.training.model.entity.Task;
-import vn.elca.training.model.entity.TaskAudit;
-import vn.elca.training.model.entity.TaskAudit.AuditType;
-import vn.elca.training.model.entity.TaskAudit.Status;
 import vn.elca.training.service.AuditService;
 
 /**

@@ -3,12 +3,10 @@ package vn.elca.training.repository.custom;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQuery;
 import vn.elca.training.model.entity.Project;
-import vn.elca.training.model.entity.Task;
 import vn.elca.training.model.entity.QProject;
 import vn.elca.training.model.entity.QTask;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
-import java.util.Collections;
 import java.util.List;
 
 import org.springframework.stereotype.Repository;

@@ -16,7 +16,6 @@
 package vn.elca.training.validator;
 
 import org.springframework.stereotype.Component;
-import vn.elca.training.model.entity.Task;
 import vn.elca.training.model.exception.DeadlineAfterFinishingDateException;
 
 /**

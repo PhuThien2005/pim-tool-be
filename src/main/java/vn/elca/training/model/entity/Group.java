@@ -1,50 +1,80 @@
 package vn.elca.training.model.entity;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import javax.persistence.*;
 import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
 
-/**
- * Entity Group đại diện cho nhóm dự án (Group) trong tổ chức.
- * Được ánh xạ vào bảng PROJECT_GROUP để tránh từ khóa 'GROUP' trong SQL.
- */
 @Entity
-@Table(name = "GROUPS")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Group implements Serializable {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(nullable = false)
-    private String name;
-
+@Table(name = "GROUP")
+public class Group extends AbstractBaseEntity {
+    @Setter(AccessLevel.NONE)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "group_leader_id")
+    @JoinColumn(name = "GROUP_LEADER_ID", nullable = false)
     private Employee groupLeader;
 
-    @Builder.Default
-    @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private Set<Project> projects = new HashSet<>();
-
-    public Group(String name) {
-        this.name = name;
+    public void setGroupLeader(Employee groupLeader) {
+        if (this.groupLeader == groupLeader) {
+            return;
+        }
+        if (this.groupLeader != null && this.groupLeader.getGroups() != null) {
+            this.groupLeader.getGroups().remove(this);
+        }
+        this.groupLeader = groupLeader;
+        if (groupLeader != null && groupLeader.getGroups() != null) {
+            if (!groupLeader.getGroups().contains(this)) {
+                groupLeader.getGroups().add(this);
+            }
+        }
     }
 
-    public Group(String name, Employee groupLeader) {
-        this.name = name;
-        this.groupLeader = groupLeader;
+    public void removeGroupLeader() {
+        this.setGroupLeader(null);
+    }
+
+    @Builder.Default
+    @Setter(AccessLevel.NONE)
+    @OneToMany(mappedBy = "group", fetch = FetchType.LAZY)
+    private Set<Project> projects = new HashSet<>();
+
+    public void addProject(Project project) {
+        if (project != null) {
+            if (this.projects == null) {
+                this.projects = new HashSet<>();
+            }
+            this.projects.add(project);
+            if (project.getGroup() != this) {
+                project.setGroup(this);
+            }
+        }
+    }
+
+    public void removeProject(Project project) {
+        if (project != null && this.projects != null) {
+            this.projects.remove(project);
+            if (project.getGroup() == this) {
+                project.setGroup(null);
+            }
+        }
+    }
+
+    public void setProjects(Set<Project> projects) {
+        if (this.projects != null) {
+            for (Project prj : new HashSet<>(this.projects)) {
+                this.removeProject(prj);
+            }
+        }
+        if (projects != null) {
+            for (Project prj : projects) {
+                this.addProject(prj);
+            }
+        }
     }
 }

@@ -813,6 +813,7 @@ Cấu hình thuộc tính truyền dẫn Transaction: **`Propagation.REQUIRES_NE
 `src/main/java/vn/elca/training/service/impl/AuditServiceImpl.java`
 
 ### Mã nguồn:
+
 ```java
 package vn.elca.training.service.impl;
 
@@ -820,7 +821,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import vn.elca.training.model.entity.TaskAudit;
 import vn.elca.training.repository.TaskAuditRepository;
 import vn.elca.training.service.AuditService;
 

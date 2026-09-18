@@ -4,7 +4,6 @@ import java.time.LocalDate;
 import java.util.List;
 
 import vn.elca.training.model.entity.Project;
-import vn.elca.training.model.entity.Task;
 import vn.elca.training.model.exception.DeadlineAfterFinishingDateException;
 
 /**

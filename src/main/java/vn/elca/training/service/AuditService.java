@@ -15,10 +15,6 @@
 
 package vn.elca.training.service;
 
-import vn.elca.training.model.entity.Task;
-import vn.elca.training.model.entity.TaskAudit.AuditType;
-import vn.elca.training.model.entity.TaskAudit.Status;
-
 /**
  * @author vlp
  *

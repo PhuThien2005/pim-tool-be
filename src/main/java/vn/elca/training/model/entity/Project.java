@@ -1,10 +1,6 @@
 package vn.elca.training.model.entity;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
@@ -19,6 +15,7 @@ import java.util.Set;
 @AllArgsConstructor
 @Table(name = "PROJECT")
 public class Project extends AbstractBaseEntity {
+    @Setter(AccessLevel.NONE)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "GROUP_ID", nullable = false)
     private Group group;
@@ -42,6 +39,7 @@ public class Project extends AbstractBaseEntity {
     @Column(name = "END_DATE")
     private LocalDate endDate;
 
+    @Setter(AccessLevel.NONE)
     @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
             name = "PROJECT_EMPLOYEE",
@@ -51,7 +49,55 @@ public class Project extends AbstractBaseEntity {
     private Set<Employee> employees = new HashSet<>();
 
     public void addEmployee(Employee employee) {
-        employees.add(employee);
-        employee
+        if (employee != null) {
+            if (this.employees == null) {
+                this.employees = new HashSet<>();
+            }
+            this.employees.add(employee);
+            if (employee.getProjects() != null) {
+                employee.getProjects().add(this);
+            }
+        }
+    }
+
+    public void removeEmployee(Employee employee) {
+        if (employee != null && this.employees != null) {
+            this.employees.remove(employee);
+            if (employee.getProjects() != null) {
+                employee.getProjects().remove(this);
+            }
+        }
+    }
+
+    public void setEmployees(Set<Employee> employees) {
+        if (this.employees != null) {
+            for (Employee emp : new HashSet<>(this.employees)) {
+                this.removeEmployee(emp);
+            }
+        }
+        if (employees != null) {
+            for (Employee emp : employees) {
+                this.addEmployee(emp);
+            }
+        }
+    }
+
+    public void setGroup(Group group) {
+        if (this.group == group) {
+            return;
+        }
+        if (this.group != null && this.group.getProjects() != null) {
+            this.group.getProjects().remove(this);
+        }
+        this.group = group;
+        if (group != null && group.getProjects() != null) {
+            if (!group.getProjects().contains(this)) {
+                group.getProjects().add(this);
+            }
+        }
+    }
+
+    public void removeGroup() {
+        this.setGroup(null);
     }
 }

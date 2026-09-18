@@ -12,6 +12,9 @@ import java.io.Serializable;
 @Getter
 @MappedSuperclass
 public abstract class AbstractBaseEntity implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     @Column(name = "ID", nullable = false, updatable = false, precision = 19, scale = 0)
