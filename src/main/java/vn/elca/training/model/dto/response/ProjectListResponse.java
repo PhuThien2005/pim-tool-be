@@ -17,12 +17,4 @@ public class ProjectListResponse {
     private ProjectStatus status;
     private String customer;
     private LocalDate startDate;
-
-    public ProjectStatus getProjectStatus() {
-        return status;
-    }
-
-    public void setProjectStatus(ProjectStatus projectStatus) {
-        this.status = projectStatus;
-    }
 }

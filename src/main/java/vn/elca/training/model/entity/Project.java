@@ -40,14 +40,6 @@ public class Project extends AbstractBaseEntity {
     @Column(name = "STATUS", length = 3, nullable = false)
     private ProjectStatus status;
 
-    public ProjectStatus getProjectStatus() {
-        return status;
-    }
-
-    public void setProjectStatus(ProjectStatus status) {
-        this.status = status;
-    }
-
     @Column(name = "START_DATE", nullable = false)
     private LocalDate startDate;
 

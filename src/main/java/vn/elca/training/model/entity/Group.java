@@ -14,7 +14,7 @@ import java.util.Set;
 @AllArgsConstructor
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Builder
-@Table(name = "GROUP")
+@Table(name = "\"GROUP\"")
 public class Group extends AbstractBaseEntity {
     @Setter(AccessLevel.NONE)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

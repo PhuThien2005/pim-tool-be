@@ -1,29 +1,38 @@
-INSERT INTO PROJECT (NAME, FINISHING_DATE, ACTIVATED)
-VALUES
-    ('EFV', '2020-04-20', true),
-    ('CXTRANET', '2020-04-25', true),
-    ('CRYSTAL BALL', '2020-04-28', true),
-    ('IOC CLIENT EXTRANET', '2020-06-07', true),
-    ('TRADEECO', '2020-06-08', true);
+INSERT INTO EMPLOYEE (ID, VERSION, VISA, FIRST_NAME, LAST_NAME, BIRTH_DATE) VALUES
+    (1, 0, 'DTH', 'Thien', 'Doan', '1995-05-15'),
+    (2, 0, 'BHU', 'Hung', 'Bui', '1992-08-20'),
+    (3, 0, 'JHV', 'Hai', 'Vu', '1994-11-10'),
+    (4, 0, 'HTV', 'Thang', 'Vo', '1990-03-25'),
+    (5, 0, 'NQN', 'Nhat', 'Nguyen', '1996-07-12'),
+    (6, 0, 'HNH', 'Hao', 'Nguyen', '1993-09-08'),
+    (7, 0, 'TQP', 'Phuong', 'Tran', '1991-12-01'),
+    (8, 0, 'QMV', 'Minh', 'Quach', '1989-04-18');
 
-INSERT INTO USER (USERNAME, USERNAME_LENGTH)
-VALUES
-    ('USER1', 5),
-    ('USER2', 5),
-    ('USER3', 5);
+INSERT INTO "group" (ID, VERSION, GROUP_LEADER_ID) VALUES
+    (1, 0, 1),
+    (2, 0, 2),
+    (3, 0, 3);
 
-INSERT INTO TASK(NAME, DEADLINE, PROJECT_ID, USER_ID)
-VALUES
-    ('EFV_TASK_1', '2020-03-05', 1, 1),
-    ('EFV_TASK_2', '2020-03-10', 1, null),
-    ('EFV_TASK_3', '2020-03-15', 1, null),
-    ('EFV_TASK_4', '2020-03-20', 1, null),
-    ('CXTRANET_TASK_1', '2020-04-01', 2, null),
-    ('CXTRANET_TASK_2', '2020-04-10', 2, null),
-    ('CXTRANET_TASK_3', '2020-04-15', 2, null),
-    ('CRYSTAL_TASK_1', '2020-04-05', 3, null),
-    ('CRYSTAL_TASK_2', '2020-04-15', 3, null),
-    ('IOC_TASK_1', '2020-05-01', 4, null),
-    ('IOC_TASK_2', '2020-05-15', 4, null),
-    ('TRADEECO_TASK_1', '2020-05-20', 5, null),
-    ('TRADEECO_TASK_2', '2020-05-25', 5, null);
+INSERT INTO PROJECT (ID, VERSION, GROUP_ID, PROJECT_NUMBER, NAME, CUSTOMER, STATUS, START_DATE, END_DATE) VALUES
+    (1, 0, 1, 1001, 'EFV', 'Customer A', 'NEW', '2025-01-10', '2025-12-31'),
+    (2, 0, 1, 1002, 'CXTRANET', 'Customer B', 'PLA', '2025-02-01', '2025-08-30'),
+    (3, 0, 2, 1003, 'CRYSTAL BALL', 'Customer A', 'INP', '2024-06-15', '2025-06-15'),
+    (4, 0, 2, 1004, 'IOC CLIENT EXTRANET', 'Customer C', 'FIN', '2023-01-01', '2024-01-01'),
+    (5, 0, 3, 1005, 'TRADEECO', 'Customer B', 'NEW', '2025-03-01', null),
+    (6, 0, 3, 1006, 'KSTA MIGRATION', 'Customer D', 'INP', '2024-09-01', '2025-09-01');
+
+INSERT INTO PROJECT_EMPLOYEE (PROJECT_ID, EMPLOYEE_ID) VALUES
+    (1, 4),
+    (1, 5),
+    (2, 5),
+    (2, 6),
+    (3, 7),
+    (3, 8),
+    (4, 4),
+    (4, 7),
+    (4, 8),
+    (5, 6),
+    (6, 5),
+    (6, 7);
+
+ALTER SEQUENCE hibernate_sequence RESTART WITH 100;

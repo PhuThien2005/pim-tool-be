@@ -22,12 +22,4 @@ public class ProjectDetailResponse {
     private LocalDate startDate;
     private LocalDate endDate;
     private Set<String> visas;
-
-    public ProjectStatus getProjectStatus() {
-        return status;
-    }
-
-    public void setProjectStatus(ProjectStatus projectStatus) {
-        this.status = projectStatus;
-    }
 }

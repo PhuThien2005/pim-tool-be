@@ -26,9 +26,11 @@ import javax.persistence.OptimisticLockException;
 import javax.validation.ConstraintViolation;
 import javax.validation.ConstraintViolationException;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 @Slf4j
@@ -153,10 +155,16 @@ public class GlobalExceptionHandler {
         log.warn("Invalid project status: {}", ex.getMessage());
         String message = getLocalizedMessage("error.invalid.project.status", ex.getMessage(), locale);
 
+        Map<String, String> errors = null;
+        if (ex.getInvalidProjectIds() != null && !ex.getInvalidProjectIds().isEmpty()) {
+            errors = Collections.singletonMap("invalidProjectIds", ex.getInvalidProjectIds().stream().map(String::valueOf).collect(Collectors.joining(", ")));
+        }
+
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .status(HttpStatus.BAD_REQUEST.value())
                 .errorCode("INVALID_PROJECT_STATUS")
                 .message(message)
+                .errors(errors)
                 .timestamp(LocalDateTime.now())
                 .build();
 
@@ -173,10 +181,16 @@ public class GlobalExceptionHandler {
             message = ex.getMessage();
         }
 
+        Map<String, String> errors = null;
+        if (ex.getNotFoundProjectIds() != null && !ex.getNotFoundProjectIds().isEmpty()) {
+            errors = Collections.singletonMap("notFoundProjectIds", ex.getNotFoundProjectIds().stream().map(String::valueOf).collect(Collectors.joining(", ")));
+        }
+
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .status(HttpStatus.NOT_FOUND.value())
                 .errorCode("PROJECT_NOT_FOUND")
                 .message(message)
+                .errors(errors)
                 .timestamp(LocalDateTime.now())
                 .build();
 

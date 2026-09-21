@@ -9,4 +9,6 @@ import vn.elca.training.model.dto.response.ProjectListResponse;
 
 public interface ProjectService {
     public Page<ProjectListResponse> searchProjects(SearchProjectCriteria criteria, Pageable pageable);
+    public void deleteProject(Long projectId);
+    public void deleteProjects(List<Long> projectIds);
 }
