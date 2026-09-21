@@ -1,9 +1,15 @@
 package vn.elca.training.model.dto.request;
 
+import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.Predicate;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import lombok.*;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.format.annotation.DateTimeFormat;
 import vn.elca.training.model.entity.ProjectStatus;
+import vn.elca.training.model.entity.QProject;
 import vn.elca.training.validator.StartBeforeEndDate;
+import vn.elca.training.validator.ValidVisa;
 
 import javax.validation.constraints.Size;
 import java.time.LocalDate;
@@ -32,11 +38,11 @@ public class SearchProjectCriteria {
 
     private ProjectStatus status;
 
-    @Size(max = 50, message = "{project.search.leader.size}")
-    private String projectLeader;
+    @ValidVisa(message = "{employee.visa.invalid}")
+    private String leaderVisa;
 
-    @Size(max = 50, message = "{project.search.member.size}")
-    private String member;
+    @ValidVisa(message = "{employee.visa.invalid}")
+    private String memberVisa;
 
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate startDateFrom;
@@ -49,4 +55,21 @@ public class SearchProjectCriteria {
 
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate endDateTo;
+
+    public Predicate toPredicate() {
+        QProject p = QProject.project;
+        String kw = StringUtils.isNotBlank(keyword) ? keyword.trim() : null;
+        BooleanExpression keywordExp = (kw == null) ? null : p.name.containsIgnoreCase(kw)
+                .or(p.customer.containsIgnoreCase(kw))
+                .or(StringUtils.isNumeric(kw) ? p.projectNumber.eq(Integer.parseInt(kw)) : null);
+        return new BooleanBuilder()
+                .and(keywordExp)
+                .and(status != null ? p.status.eq(status) : null)
+                .and(StringUtils.isNotBlank(leaderVisa) ? p.group.groupLeader.visa.equalsIgnoreCase(leaderVisa.trim()) : null)
+                .and(StringUtils.isNotBlank(memberVisa) ? p.employees.any().visa.equalsIgnoreCase(memberVisa.trim()) : null)
+                .and(startDateFrom != null ? p.startDate.goe(startDateFrom) : null)
+                .and(startDateTo != null ? p.startDate.loe(startDateTo) : null)
+                .and(endDateFrom != null ? p.endDate.goe(endDateFrom) : null)
+                .and(endDateTo != null ? p.endDate.loe(endDateTo) : null);
+    }
 }

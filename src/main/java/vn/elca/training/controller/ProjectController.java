@@ -1,4 +1,4 @@
-package vn.elca.training.web;
+package vn.elca.training.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

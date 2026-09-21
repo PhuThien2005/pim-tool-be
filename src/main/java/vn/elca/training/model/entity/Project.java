@@ -3,9 +3,7 @@ package vn.elca.training.model.entity;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 import org.hibernate.annotations.BatchSize;
-
 import javax.persistence.*;
-import javax.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
@@ -25,7 +23,7 @@ import java.util.Set;
 })
 public class Project extends AbstractBaseEntity {
     @Setter(AccessLevel.NONE)
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "GROUP_ID", nullable = false)
     private Group group;
 
@@ -42,6 +40,14 @@ public class Project extends AbstractBaseEntity {
     @Column(name = "STATUS", length = 3, nullable = false)
     private ProjectStatus status;
 
+    public ProjectStatus getProjectStatus() {
+        return status;
+    }
+
+    public void setProjectStatus(ProjectStatus status) {
+        this.status = status;
+    }
+
     @Column(name = "START_DATE", nullable = false)
     private LocalDate startDate;
 
@@ -49,6 +55,7 @@ public class Project extends AbstractBaseEntity {
     private LocalDate endDate;
 
     @BatchSize(size = 20)
+    @Builder.Default
     @Setter(AccessLevel.NONE)
     @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(

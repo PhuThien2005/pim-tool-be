@@ -2,17 +2,11 @@ package vn.elca.training.service;
 
 import java.util.List;
 
-import vn.elca.training.model.entity.Project;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import vn.elca.training.model.dto.request.SearchProjectCriteria;
+import vn.elca.training.model.dto.response.ProjectListResponse;
 
-/**
- * @author vlp
- *
- */
 public interface ProjectService {
-    List<Project> findAll();
-    List<ProjectDto> searchByKeyword(String keyword);
-    long count();
-    ProjectDto findProjectById(Long id);
-    ProjectDto updateProject(Long id, ProjectDto projectDto);
-    Project createMaintenanceProject(Long oldProjectId);
+    public Page<ProjectListResponse> searchProjects(SearchProjectCriteria criteria, Pageable pageable);
 }

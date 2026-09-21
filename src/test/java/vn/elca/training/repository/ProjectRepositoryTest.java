@@ -85,7 +85,7 @@ public class ProjectRepositoryTest {
         Project found = foundOpt.get();
         Assert.assertEquals("PROJECT_SOLO", found.getName());
         Assert.assertEquals("CUSTOMER_SOLO", found.getCustomer());
-        Assert.assertEquals(ProjectStatus.NEW, found.getStatus());
+        Assert.assertEquals(ProjectStatus.NEW, found.getProjectStatus());
         Assert.assertTrue(found.isActivated());
     }
 
@@ -255,7 +255,7 @@ public class ProjectRepositoryTest {
         Assert.assertEquals("Chỉ được tìm thấy đúng 1 dự án thỏa mãn", 1, results.size());
         Project found = results.get(0);
         Assert.assertEquals("PROJECT_BETA", found.getName());
-        Assert.assertEquals(ProjectStatus.INP, found.getStatus());
+        Assert.assertEquals(ProjectStatus.INP, found.getProjectStatus());
         Assert.assertEquals("CUSTOMER_B", found.getCustomer());
     }
 
@@ -299,7 +299,7 @@ public class ProjectRepositoryTest {
         Assert.assertEquals("Chỉ duy nhất 1 dự án thỏa mãn tất cả tiêu chí riêng và quan hệ", 1, results.size());
         Project matched = results.get(0);
         Assert.assertEquals("COMPLEX_TARGET_PROJECT", matched.getName());
-        Assert.assertEquals(ProjectStatus.INP, matched.getStatus());
+        Assert.assertEquals(ProjectStatus.INP, matched.getProjectStatus());
         Assert.assertEquals("ELCA_CUSTOMER", matched.getCustomer());
         Assert.assertEquals("TARGET_GROUP", matched.getGroup().getName());
         Assert.assertEquals("COMPLEX_LEADER", matched.getGroup().getGroupLeader().getUsername());

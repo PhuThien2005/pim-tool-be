@@ -18,8 +18,16 @@ public class ProjectDetailResponse {
     private Integer projectNumber;
     private String name;
     private String customer;
-    private ProjectStatus projectStatus;
+    private ProjectStatus status;
     private LocalDate startDate;
     private LocalDate endDate;
     private Set<String> visas;
+
+    public ProjectStatus getProjectStatus() {
+        return status;
+    }
+
+    public void setProjectStatus(ProjectStatus projectStatus) {
+        this.status = projectStatus;
+    }
 }

@@ -821,7 +821,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import vn.elca.training.service.AuditService;
 
 @Service
 public class AuditServiceImpl implements AuditService {

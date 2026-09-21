@@ -14,7 +14,15 @@ public class ProjectListResponse {
     private Long id;
     private Integer projectNumber;
     private String name;
-    private ProjectStatus projectStatus;
+    private ProjectStatus status;
     private String customer;
     private LocalDate startDate;
+
+    public ProjectStatus getProjectStatus() {
+        return status;
+    }
+
+    public void setProjectStatus(ProjectStatus projectStatus) {
+        this.status = projectStatus;
+    }
 }

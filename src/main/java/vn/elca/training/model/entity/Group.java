@@ -3,9 +3,7 @@ package vn.elca.training.model.entity;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 import org.hibernate.annotations.BatchSize;
-
 import javax.persistence.*;
-import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -19,7 +17,7 @@ import java.util.Set;
 @Table(name = "GROUP")
 public class Group extends AbstractBaseEntity {
     @Setter(AccessLevel.NONE)
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "GROUP_LEADER_ID", nullable = false)
     private Employee groupLeader;
 
