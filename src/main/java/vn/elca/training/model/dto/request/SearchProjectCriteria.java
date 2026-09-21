@@ -8,8 +8,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.format.annotation.DateTimeFormat;
 import vn.elca.training.model.entity.ProjectStatus;
 import vn.elca.training.model.entity.QProject;
-import vn.elca.training.validator.StartBeforeEndDate;
-import vn.elca.training.validator.ValidVisa;
+import vn.elca.training.validator.annotation.StartBeforeEndDate;
+import vn.elca.training.validator.annotation.ValidVisa;
 
 import javax.validation.constraints.Size;
 import java.time.LocalDate;

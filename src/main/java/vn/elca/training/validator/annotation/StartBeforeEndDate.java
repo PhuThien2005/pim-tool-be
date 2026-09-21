@@ -1,4 +1,6 @@
-package vn.elca.training.validator;
+package vn.elca.training.validator.annotation;
+
+import vn.elca.training.validator.impl.StartBeforeEndDateValidator;
 
 import javax.validation.Constraint;
 import javax.validation.Payload;
@@ -9,13 +11,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/**
- * Annotation kiểm tra logic: End Date phải sau Start Date (nếu End Date được nhập).
- * Theo yêu cầu của ELCA PIM Tool:
- * "END_DATE: Date. If this value is not null, it must be later than the project start date."
- *
- * Annotation này được đặt ở cấp CLASS (ElementType.TYPE) trên các Request DTO.
- */
 @Documented
 @Constraint(validatedBy = StartBeforeEndDateValidator.class)
 @Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})

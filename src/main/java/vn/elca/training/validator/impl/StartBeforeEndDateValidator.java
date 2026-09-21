@@ -1,15 +1,12 @@
-package vn.elca.training.validator;
+package vn.elca.training.validator.impl;
 
 import org.springframework.beans.BeanWrapperImpl;
+import vn.elca.training.validator.annotation.StartBeforeEndDate;
 
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 import java.time.LocalDate;
 
-/**
- * Validator kiểm tra quan hệ giữa startDate và endDate bằng Reflection/BeanWrapper.
- * Nếu endDate không null, nó bắt buộc phải sau startDate (endDate.isAfter(startDate)).
- */
 public class StartBeforeEndDateValidator implements ConstraintValidator<StartBeforeEndDate, Object> {
 
     private String startDateField;
@@ -36,7 +33,6 @@ public class StartBeforeEndDateValidator implements ConstraintValidator<StartBef
             Object startObj = wrapper.getPropertyValue(startDateField);
             Object endObj = wrapper.getPropertyValue(endDateField);
 
-            // Nếu 1 trong 2 ngày là null, bỏ qua (để @NotNull lo nếu trường đó bắt buộc)
             if (startObj == null || endObj == null) {
                 return true;
             }
@@ -47,7 +43,6 @@ public class StartBeforeEndDateValidator implements ConstraintValidator<StartBef
 
                 boolean isValid = allowEqual ? !endDate.isBefore(startDate) : endDate.isAfter(startDate);
                 if (!isValid) {
-                    // Gắn lỗi trực tiếp vào trường endDate để frontend highlight đỏ đúng trường
                     context.disableDefaultConstraintViolation();
                     context.buildConstraintViolationWithTemplate(message)
                             .addPropertyNode(endDateField)
@@ -57,7 +52,6 @@ public class StartBeforeEndDateValidator implements ConstraintValidator<StartBef
             }
             return true;
         } catch (Exception e) {
-            // Nếu không đọc được property thì bỏ qua để không làm gián đoạn hệ thống
             return true;
         }
     }

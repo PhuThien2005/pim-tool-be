@@ -1,4 +1,6 @@
-package vn.elca.training.validator;
+package vn.elca.training.validator.annotation;
+
+import vn.elca.training.validator.impl.VisaValidator;
 
 import javax.validation.Constraint;
 import javax.validation.Payload;
@@ -8,17 +10,13 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/**
- * Annotation kiểm tra danh sách VISA của Project Members (Collection hoặc Set của String).
- * Mỗi VISA trong danh sách phải đúng 3 chữ cái in hoa.
- */
 @Documented
-@Constraint(validatedBy = VisasValidator.class)
+@Constraint(validatedBy = VisaValidator.class)
 @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface ValidVisas {
+public @interface ValidVisa {
 
-    String message() default "One or more member VISAs have invalid format. Each VISA must consist of exactly 3 uppercase letters.";
+    String message() default "Invalid VISA format. VISA must consist of exactly 3 uppercase letters (e.g. DTH, BHU).";
 
     Class<?>[] groups() default {};
 

@@ -27,7 +27,6 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
                 .where(criteria != null ? criteria.toPredicate() : null)
                 .orderBy(p.projectNumber.asc())
                 .distinct();
-
         long total = (pageable != null && pageable.isPaged()) ? query.fetchCount() : 0;
         if (pageable != null && pageable.isPaged()) {
             query.offset(pageable.getOffset()).limit(pageable.getPageSize());

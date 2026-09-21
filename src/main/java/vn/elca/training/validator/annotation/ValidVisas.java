@@ -1,4 +1,6 @@
-package vn.elca.training.validator;
+package vn.elca.training.validator.annotation;
+
+import vn.elca.training.validator.impl.VisasValidator;
 
 import javax.validation.Constraint;
 import javax.validation.Payload;
@@ -8,17 +10,13 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/**
- * Annotation kiểm tra định dạng VISA của Employee.
- * Theo yêu cầu của ELCA PIM Tool: VISA gồm đúng 3 chữ cái in hoa (ví dụ: DTH, BHU, JHV).
- */
 @Documented
-@Constraint(validatedBy = VisaValidator.class)
+@Constraint(validatedBy = VisasValidator.class)
 @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface ValidVisa {
+public @interface ValidVisas {
 
-    String message() default "Invalid VISA format. VISA must consist of exactly 3 uppercase letters (e.g. DTH, BHU).";
+    String message() default "One or more member VISAs have invalid format. Each VISA must consist of exactly 3 uppercase letters.";
 
     Class<?>[] groups() default {};
 
