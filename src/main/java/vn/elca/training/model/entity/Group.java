@@ -1,6 +1,7 @@
 package vn.elca.training.model.entity;
 
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -20,6 +21,12 @@ public class Group extends AbstractBaseEntity {
     @JoinColumn(name = "GROUP_LEADER_ID", nullable = false)
     private Employee groupLeader;
 
+    @BatchSize(size = 20)
+    @Builder.Default
+    @Setter(AccessLevel.NONE)
+    @OneToMany(mappedBy = "group", fetch = FetchType.LAZY)
+    private Set<Project> projects = new HashSet<>();
+
     public void setGroupLeader(Employee groupLeader) {
         if (this.groupLeader == groupLeader) {
             return;
@@ -38,11 +45,6 @@ public class Group extends AbstractBaseEntity {
     public void removeGroupLeader() {
         this.setGroupLeader(null);
     }
-
-    @Builder.Default
-    @Setter(AccessLevel.NONE)
-    @OneToMany(mappedBy = "group", fetch = FetchType.LAZY)
-    private Set<Project> projects = new HashSet<>();
 
     public void addProject(Project project) {
         if (project != null) {

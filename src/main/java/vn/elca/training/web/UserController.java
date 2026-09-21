@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import vn.elca.training.model.dto.UserDto;
 import vn.elca.training.model.entity.Employee;
 import vn.elca.training.service.UserService;
 

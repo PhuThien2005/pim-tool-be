@@ -1,6 +1,7 @@
 package vn.elca.training.model.entity;
 
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
@@ -39,6 +40,7 @@ public class Project extends AbstractBaseEntity {
     @Column(name = "END_DATE")
     private LocalDate endDate;
 
+    @BatchSize(size = 20)
     @Setter(AccessLevel.NONE)
     @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
@@ -47,6 +49,25 @@ public class Project extends AbstractBaseEntity {
             inverseJoinColumns = @JoinColumn(name = "EMPLOYEE_ID")
     )
     private Set<Employee> employees = new HashSet<>();
+
+    public void setGroup(Group group) {
+        if (this.group == group) {
+            return;
+        }
+        if (this.group != null && this.group.getProjects() != null) {
+            this.group.getProjects().remove(this);
+        }
+        this.group = group;
+        if (group != null && group.getProjects() != null) {
+            if (!group.getProjects().contains(this)) {
+                group.getProjects().add(this);
+            }
+        }
+    }
+
+    public void removeGroup() {
+        this.setGroup(null);
+    }
 
     public void addEmployee(Employee employee) {
         if (employee != null) {
@@ -80,24 +101,5 @@ public class Project extends AbstractBaseEntity {
                 this.addEmployee(emp);
             }
         }
-    }
-
-    public void setGroup(Group group) {
-        if (this.group == group) {
-            return;
-        }
-        if (this.group != null && this.group.getProjects() != null) {
-            this.group.getProjects().remove(this);
-        }
-        this.group = group;
-        if (group != null && group.getProjects() != null) {
-            if (!group.getProjects().contains(this)) {
-                group.getProjects().add(this);
-            }
-        }
-    }
-
-    public void removeGroup() {
-        this.setGroup(null);
     }
 }

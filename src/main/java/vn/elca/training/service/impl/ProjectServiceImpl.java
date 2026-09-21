@@ -1,14 +1,10 @@
 package vn.elca.training.service.impl;
 
-import com.querydsl.core.BooleanBuilder;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import vn.elca.training.model.dto.ProjectDto;
 import vn.elca.training.model.entity.Project;
 import vn.elca.training.model.entity.ProjectStatus;
-import vn.elca.training.model.entity.QProject;
 import vn.elca.training.repository.ProjectRepository;
 import vn.elca.training.service.ProjectService;
 import vn.elca.training.util.ApplicationMapper;
@@ -16,7 +12,6 @@ import vn.elca.training.util.ApplicationMapper;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 /**
  * @author vlp

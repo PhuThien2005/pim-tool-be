@@ -4,7 +4,6 @@ import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import vn.elca.training.model.dto.UserDto;
 import vn.elca.training.model.entity.Employee;
 import vn.elca.training.model.exception.ApplicationUnexpectedException;
 import vn.elca.training.repository.TaskRepository;

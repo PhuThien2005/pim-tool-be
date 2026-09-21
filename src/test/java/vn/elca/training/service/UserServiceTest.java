@@ -9,7 +9,6 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.transaction.annotation.Transactional;
 import vn.elca.training.ApplicationWebConfig;
-import vn.elca.training.model.dto.UserDto;
 import vn.elca.training.model.entity.Employee;
 import vn.elca.training.model.entity.Project;
 import vn.elca.training.repository.ProjectRepository;

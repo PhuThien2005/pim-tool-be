@@ -1,9 +1,6 @@
 package vn.elca.training.util;
 
 import org.springframework.stereotype.Component;
-import vn.elca.training.model.dto.ProjectDto;
-import vn.elca.training.model.dto.TaskDto;
-import vn.elca.training.model.dto.UserDto;
 import vn.elca.training.model.entity.Employee;
 import vn.elca.training.model.entity.Project;
 

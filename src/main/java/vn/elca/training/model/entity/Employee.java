@@ -3,6 +3,7 @@ package vn.elca.training.model.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -35,49 +36,17 @@ public class Employee extends AbstractBaseEntity {
     @Column(name = "BIRTH_DATE", nullable = false)
     private LocalDate birthDate;
 
+    @BatchSize(size = 20)
     @Builder.Default
     @Setter(AccessLevel.NONE)
     @ManyToMany(mappedBy = "employees", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private Set<Project> projects = new HashSet<>();
 
+    @BatchSize(size = 20)
     @Builder.Default
     @Setter(AccessLevel.NONE)
     @OneToMany(mappedBy = "groupLeader", fetch = FetchType.LAZY)
     private Set<Group> groups = new HashSet<>();
-
-    public void addGroup(Group group) {
-        if (group != null) {
-            if (this.groups == null) {
-                this.groups = new HashSet<>();
-            }
-            this.groups.add(group);
-            if (group.getGroupLeader() != this) {
-                group.setGroupLeader(this);
-            }
-        }
-    }
-
-    public void removeGroup(Group group) {
-        if (group != null && this.groups != null) {
-            this.groups.remove(group);
-            if (group.getGroupLeader() == this) {
-                group.setGroupLeader(null);
-            }
-        }
-    }
-
-    public void setGroups(Set<Group> groups) {
-        if (this.groups != null) {
-            for (Group grp : new HashSet<>(this.groups)) {
-                this.removeGroup(grp);
-            }
-        }
-        if (groups != null) {
-            for (Group grp : groups) {
-                this.addGroup(grp);
-            }
-        }
-    }
 
     public void addProject(Project project) {
         if (project != null) {
@@ -109,6 +78,40 @@ public class Employee extends AbstractBaseEntity {
         if (projects != null) {
             for (Project prj : projects) {
                 this.addProject(prj);
+            }
+        }
+    }
+
+    public void addGroup(Group group) {
+        if (group != null) {
+            if (this.groups == null) {
+                this.groups = new HashSet<>();
+            }
+            this.groups.add(group);
+            if (group.getGroupLeader() != this) {
+                group.setGroupLeader(this);
+            }
+        }
+    }
+
+    public void removeGroup(Group group) {
+        if (group != null && this.groups != null) {
+            this.groups.remove(group);
+            if (group.getGroupLeader() == this) {
+                group.setGroupLeader(null);
+            }
+        }
+    }
+
+    public void setGroups(Set<Group> groups) {
+        if (this.groups != null) {
+            for (Group grp : new HashSet<>(this.groups)) {
+                this.removeGroup(grp);
+            }
+        }
+        if (groups != null) {
+            for (Group grp : groups) {
+                this.addGroup(grp);
             }
         }
     }

@@ -7,7 +7,6 @@ import com.querydsl.jpa.impl.JPAQuery;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import vn.elca.training.model.dto.ProjectDto;
 import vn.elca.training.model.entity.Project;
 import vn.elca.training.model.entity.QProject;
 import vn.elca.training.model.entity.QTask;
