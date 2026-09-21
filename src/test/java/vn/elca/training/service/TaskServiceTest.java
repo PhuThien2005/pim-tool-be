@@ -22,7 +22,6 @@ import vn.elca.training.model.entity.QTask;
 import vn.elca.training.model.entity.QTaskAudit;
 import vn.elca.training.model.exception.DeadlineAfterFinishingDateException;
 import vn.elca.training.repository.ProjectRepository;
-import vn.elca.training.repository.TaskRepository;
 
 /**
  * @author vlp

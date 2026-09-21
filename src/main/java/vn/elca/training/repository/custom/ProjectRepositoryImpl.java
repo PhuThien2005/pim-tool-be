@@ -5,18 +5,14 @@ import com.querydsl.jpa.impl.JPAQuery;
 import vn.elca.training.model.entity.Project;
 import vn.elca.training.model.entity.QProject;
 import vn.elca.training.model.entity.QTask;
+
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import java.util.List;
+import java.util.Set;
 
-import org.springframework.stereotype.Repository;
+public class ProjectRepositoryImpl implements ProjectRepositoryCustom{
 
-/**
- * @author gtn
- *
- */
-@Repository
-public class TaskRepositoryImpl implements TaskRepositoryCustom {
     @PersistenceContext
     private EntityManager em;
 
@@ -35,12 +31,17 @@ public class TaskRepositoryImpl implements TaskRepositoryCustom {
     }
 
     @Override
-    public List<Task> listRecentTasks(int limit) {
-        return new JPAQuery<Task>(em)
+    public List<Project> listRecentTasks(int limit) {
+        return new JPAQuery<Project>(em)
                 .from(QTask.task)
                 .innerJoin(QTask.task.project, QProject.project).fetchJoin()
                 .orderBy(QTask.task.id.desc())
                 .limit(limit)
                 .fetch();
+    }
+
+    @Override
+    public Set<Project> searchWithCriteria() {
+        return null;
     }
 }

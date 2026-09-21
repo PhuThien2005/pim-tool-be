@@ -22,7 +22,9 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table(name = "EMPLOYEE")
+@Table(name = "EMPLOYEE", indexes = {
+        @Index(name = "idx_employee_visa", columnList = "VISA", unique = true)
+})
 public class Employee extends AbstractBaseEntity {
     @Column(name = "VISA", length = 3, nullable = false)
     private String visa;

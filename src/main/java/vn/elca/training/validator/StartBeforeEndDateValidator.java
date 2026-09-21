@@ -15,12 +15,14 @@ public class StartBeforeEndDateValidator implements ConstraintValidator<StartBef
     private String startDateField;
     private String endDateField;
     private String message;
+    private boolean allowEqual;
 
     @Override
     public void initialize(StartBeforeEndDate constraintAnnotation) {
         this.startDateField = constraintAnnotation.startDateField();
         this.endDateField = constraintAnnotation.endDateField();
         this.message = constraintAnnotation.message();
+        this.allowEqual = constraintAnnotation.allowEqual();
     }
 
     @Override
@@ -43,7 +45,7 @@ public class StartBeforeEndDateValidator implements ConstraintValidator<StartBef
                 LocalDate startDate = (LocalDate) startObj;
                 LocalDate endDate = (LocalDate) endObj;
 
-                boolean isValid = endDate.isAfter(startDate);
+                boolean isValid = allowEqual ? !endDate.isBefore(startDate) : endDate.isAfter(startDate);
                 if (!isValid) {
                     // Gắn lỗi trực tiếp vào trường endDate để frontend highlight đỏ đúng trường
                     context.disableDefaultConstraintViolation();

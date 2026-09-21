@@ -1,5 +1,6 @@
 package vn.elca.training.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 import org.hibernate.annotations.BatchSize;
 
@@ -14,7 +15,14 @@ import java.util.Set;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "PROJECT")
+@Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@Table(name = "PROJECT", indexes = {
+        @Index(name = "idx_project_status", columnList = "STATUS"),
+        @Index(name = "idx_project_customer", columnList = "CUSTOMER"),
+        @Index(name = "idx_project_group_id", columnList = "GROUP_ID"),
+        @Index(name = "idx_project_status_customer", columnList = "STATUS, CUSTOMER")
+})
 public class Project extends AbstractBaseEntity {
     @Setter(AccessLevel.NONE)
     @ManyToOne(fetch = FetchType.LAZY)

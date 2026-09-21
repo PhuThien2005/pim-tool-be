@@ -12,7 +12,6 @@ import vn.elca.training.ApplicationWebConfig;
 import vn.elca.training.model.entity.Employee;
 import vn.elca.training.model.entity.Project;
 import vn.elca.training.repository.ProjectRepository;
-import vn.elca.training.repository.TaskRepository;
 import vn.elca.training.repository.UserRepository;
 
 import javax.persistence.EntityManager;

@@ -1,9 +1,6 @@
 package vn.elca.training.model.dto.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import vn.elca.training.model.entity.ProjectStatus;
 
 import java.time.LocalDate;
@@ -13,11 +10,12 @@ import java.util.Set;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class ProjectDetailResponse {
     private Long id;
     private Long version;
-    private GroupResponse groupResponse;
-    private Long projectNumber;
+    private GroupDetailResponse groupResponse;
+    private Integer projectNumber;
     private String name;
     private String customer;
     private ProjectStatus projectStatus;

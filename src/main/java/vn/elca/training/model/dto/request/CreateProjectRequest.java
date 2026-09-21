@@ -1,9 +1,7 @@
 package vn.elca.training.model.dto.request;
 
-import vn.elca.training.model.dto.response.GroupResponse;
 import vn.elca.training.model.entity.ProjectStatus;
 
-import javax.persistence.UniqueConstraint;
 import javax.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.util.Set;

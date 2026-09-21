@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.elca.training.model.entity.Employee;
 import vn.elca.training.model.exception.ApplicationUnexpectedException;
-import vn.elca.training.repository.TaskRepository;
 import vn.elca.training.repository.UserRepository;
 import vn.elca.training.service.UserService;
 import vn.elca.training.util.ApplicationMapper;

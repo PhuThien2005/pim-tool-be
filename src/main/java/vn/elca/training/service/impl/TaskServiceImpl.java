@@ -25,7 +25,6 @@ import vn.elca.training.model.entity.Project;
 import vn.elca.training.model.exception.ApplicationUnexpectedException;
 import vn.elca.training.model.exception.DeadlineAfterFinishingDateException;
 import vn.elca.training.validator.TaskValidator;
-import vn.elca.training.repository.TaskRepository;
 import vn.elca.training.service.AuditService;
 import vn.elca.training.service.TaskService;
 
