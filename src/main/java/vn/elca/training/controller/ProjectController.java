@@ -9,6 +9,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import vn.elca.training.model.dto.request.SearchProjectCriteria;
+import vn.elca.training.model.dto.response.ProjectDetailResponse;
 import vn.elca.training.model.dto.response.ProjectListResponse;
 import vn.elca.training.service.ProjectService;
 
@@ -40,5 +41,10 @@ public class ProjectController {
     public ResponseEntity<Void> deleteProjects(@RequestBody List<Long> projectIds) {
         projectService.deleteProjects(projectIds);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{projectId}")
+    public ResponseEntity<ProjectDetailResponse> getProject(@PathVariable Long projectId) {
+        return ResponseEntity.ok(projectService.getProject(projectId));
     }
 }

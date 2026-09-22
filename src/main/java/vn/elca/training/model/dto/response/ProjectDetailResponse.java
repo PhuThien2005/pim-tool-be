@@ -14,12 +14,12 @@ import java.util.Set;
 public class ProjectDetailResponse {
     private Long id;
     private Long version;
-    private GroupDetailResponse groupResponse;
+    private GroupListResponse group;
     private Integer projectNumber;
     private String name;
     private String customer;
     private ProjectStatus status;
     private LocalDate startDate;
     private LocalDate endDate;
-    private Set<String> visas;
+    private Set<EmployeeListResponse> employees;
 }

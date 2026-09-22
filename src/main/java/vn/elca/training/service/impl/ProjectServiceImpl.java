@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import vn.elca.training.model.dto.request.SearchProjectCriteria;
+import vn.elca.training.model.dto.response.ProjectDetailResponse;
 import vn.elca.training.model.dto.response.ProjectListResponse;
 import vn.elca.training.model.entity.Project;
 import vn.elca.training.model.entity.ProjectStatus;
@@ -27,6 +28,16 @@ import java.util.stream.Collectors;
 public class ProjectServiceImpl implements ProjectService {
     private ProjectRepository projectRepository;
     private ModelMapper modelMapper;
+
+
+    @Transactional(readOnly = true)
+    @Override
+    public ProjectDetailResponse getProject(Long projectId) {
+        Project project = projectRepository.findDetailById(projectId)
+                .orElseThrow(() -> new ProjectNotFoundException(projectId));
+
+        return modelMapper.map(project, ProjectDetailResponse.class);
+    }
 
     @Transactional(readOnly = true)
     @Override

@@ -17,8 +17,8 @@ import java.util.Set;
 @Table(name = "\"GROUP\"")
 public class Group extends AbstractBaseEntity {
     @Setter(AccessLevel.NONE)
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "GROUP_LEADER_ID", nullable = false)
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "GROUP_LEADER_ID", nullable = false, unique = true)
     private Employee groupLeader;
 
     @BatchSize(size = 20)
@@ -31,14 +31,13 @@ public class Group extends AbstractBaseEntity {
         if (this.groupLeader == groupLeader) {
             return;
         }
-        if (this.groupLeader != null && this.groupLeader.getGroups() != null) {
-            this.groupLeader.getGroups().remove(this);
-        }
+        Employee oldGroupLeader = this.groupLeader;
         this.groupLeader = groupLeader;
-        if (groupLeader != null && groupLeader.getGroups() != null) {
-            if (!groupLeader.getGroups().contains(this)) {
-                groupLeader.getGroups().add(this);
-            }
+        if (oldGroupLeader != null && oldGroupLeader.getGroup() == this) {
+            oldGroupLeader.setGroup(null);
+        }
+        if (groupLeader != null && groupLeader.getGroup() != this) {
+            groupLeader.setGroup(this);
         }
     }
 
