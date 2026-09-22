@@ -1,8 +1,11 @@
 package vn.elca.training.repository.custom;
 
+import com.querydsl.core.types.Order;
+import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.jpa.impl.JPAQuery;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.repository.support.PageableExecutionUtils;
 import vn.elca.training.model.dto.request.SearchProjectCriteria;
 import vn.elca.training.model.entity.Project;
@@ -29,8 +32,10 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
                 .leftJoin(p.group, g).fetchJoin()
                 .leftJoin(g.groupLeader, gl).fetchJoin()
                 .where(criteria != null ? criteria.toPredicate() : null)
-                .orderBy(p.projectNumber.asc())
                 .distinct();
+
+        applySorting(dataQuery, p, g, pageable);
+
         if (pageable != null && pageable.isPaged()) {
             dataQuery.offset(pageable.getOffset()).limit(pageable.getPageSize());
         }
@@ -44,5 +49,38 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
                 pageable != null ? pageable : Pageable.unpaged(),
                 countQuery::fetchOne
         );
+    }
+
+    private void applySorting(JPAQuery<Project> dataQuery, QProject p, QGroup g, Pageable pageable) {
+        if (pageable != null && pageable.getSort().isSorted()) {
+            boolean hasProjectNumberSort = false;
+            for (Sort.Order order : pageable.getSort()) {
+                Order direction = order.isAscending() ? Order.ASC : Order.DESC;
+                String property = order.getProperty();
+                if ("projectNumber".equalsIgnoreCase(property) || "number".equalsIgnoreCase(property)) {
+                    dataQuery.orderBy(new OrderSpecifier<>(direction, p.projectNumber));
+                    hasProjectNumberSort = true;
+                } else if ("name".equalsIgnoreCase(property)) {
+                    dataQuery.orderBy(new OrderSpecifier<>(direction, p.name));
+                } else if ("customer".equalsIgnoreCase(property)) {
+                    dataQuery.orderBy(new OrderSpecifier<>(direction, p.customer));
+                } else if ("status".equalsIgnoreCase(property)) {
+                    dataQuery.orderBy(new OrderSpecifier<>(direction, p.status));
+                } else if ("startDate".equalsIgnoreCase(property)) {
+                    dataQuery.orderBy(new OrderSpecifier<>(direction, p.startDate));
+                } else if ("endDate".equalsIgnoreCase(property)) {
+                    dataQuery.orderBy(new OrderSpecifier<>(direction, p.endDate));
+                } else if ("groupId".equalsIgnoreCase(property) || "group".equalsIgnoreCase(property)) {
+                    dataQuery.orderBy(new OrderSpecifier<>(direction, g.id));
+                } else if ("id".equalsIgnoreCase(property)) {
+                    dataQuery.orderBy(new OrderSpecifier<>(direction, p.id));
+                }
+            }
+            if (!hasProjectNumberSort) {
+                dataQuery.orderBy(p.projectNumber.asc());
+            }
+        } else {
+            dataQuery.orderBy(p.projectNumber.asc());
+        }
     }
 }

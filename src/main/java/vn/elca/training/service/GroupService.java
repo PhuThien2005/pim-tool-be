@@ -1,11 +1,9 @@
 package vn.elca.training.service;
 
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import vn.elca.training.model.dto.response.GroupListResponse;
 
-import java.util.List;
-
 public interface GroupService {
-    public Page<GroupListResponse> getAll(Pageable pageable);
+    Slice<GroupListResponse> getAll(Pageable pageable);
 }

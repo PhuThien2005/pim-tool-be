@@ -17,12 +17,10 @@ import java.util.Map;
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ErrorResponse {
-
     private int status;
     private String errorCode;
     private String message;
     private Map<String, String> errors;
-
     @Builder.Default
     private LocalDateTime timestamp = LocalDateTime.now();
 }

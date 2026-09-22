@@ -21,4 +21,6 @@ public interface ProjectRepository extends JpaRepository<Project, Long>, Queryds
 
     @EntityGraph(attributePaths = {"group.groupLeader", "employees"})
     Optional<Project> findDetailById(Long id);
+
+    boolean existsByProjectNumber(Integer projectNumber);
 }

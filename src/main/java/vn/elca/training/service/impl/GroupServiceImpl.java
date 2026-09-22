@@ -2,8 +2,8 @@ package vn.elca.training.service.impl;
 
 import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.elca.training.model.dto.response.GroupListResponse;
@@ -19,8 +19,9 @@ public class GroupServiceImpl implements GroupService {
     private ModelMapper modelMapper;
 
     @Override
-    public Page<GroupListResponse> getAll(Pageable pageable) {
-        return groupRepository.findAll(pageable)
+    @Transactional(readOnly = true)
+    public Slice<GroupListResponse> getAll(Pageable pageable) {
+        return groupRepository.findAllBy(pageable)
                 .map(g -> modelMapper.map(g, GroupListResponse.class));
     }
 }

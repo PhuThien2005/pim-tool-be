@@ -16,8 +16,10 @@ import java.util.Set;
 @Builder
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Table(name = "PROJECT", indexes = {
+        @Index(name = "idx_project_name", columnList = "NAME"),
         @Index(name = "idx_project_status", columnList = "STATUS"),
         @Index(name = "idx_project_customer", columnList = "CUSTOMER"),
+        @Index(name = "idx_project_start_date", columnList = "START_DATE"),
         @Index(name = "idx_project_group_id", columnList = "GROUP_ID"),
         @Index(name = "idx_project_status_customer", columnList = "STATUS, CUSTOMER")
 })

@@ -4,7 +4,9 @@ import java.util.List;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import vn.elca.training.model.dto.request.CreateProjectRequest;
 import vn.elca.training.model.dto.request.SearchProjectCriteria;
+import vn.elca.training.model.dto.request.UpdateProjectRequest;
 import vn.elca.training.model.dto.response.ProjectDetailResponse;
 import vn.elca.training.model.dto.response.ProjectListResponse;
 
@@ -13,4 +15,6 @@ public interface ProjectService {
     public void deleteProject(Long projectId);
     public void deleteProjects(List<Long> projectIds);
     public ProjectDetailResponse getProject(Long projectId);
+    public ProjectDetailResponse createProject(CreateProjectRequest request);
+    public ProjectDetailResponse updateProject(Long projectId, UpdateProjectRequest request);
 }

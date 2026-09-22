@@ -1,8 +1,8 @@
 package vn.elca.training.controller;
 
 import lombok.AllArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
@@ -20,8 +20,8 @@ public class GroupController {
     private GroupService groupService;
 
     @GetMapping
-    public ResponseEntity<Page<GroupListResponse>> getAllGroups (
-            @PageableDefault Pageable pageable) {
+    public ResponseEntity<Slice<GroupListResponse>> getAllGroups(
+            @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
         return ResponseEntity.ok(groupService.getAll(pageable));
     }
 }
