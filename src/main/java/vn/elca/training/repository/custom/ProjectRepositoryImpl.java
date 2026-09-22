@@ -2,10 +2,11 @@ package vn.elca.training.repository.custom;
 
 import com.querydsl.jpa.impl.JPAQuery;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.repository.support.PageableExecutionUtils;
 import vn.elca.training.model.dto.request.SearchProjectCriteria;
 import vn.elca.training.model.entity.Project;
+import vn.elca.training.model.entity.QEmployee;
 import vn.elca.training.model.entity.QGroup;
 import vn.elca.training.model.entity.QProject;
 
@@ -21,17 +22,27 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
     @Override
     public Page<Project> searchProjects(SearchProjectCriteria criteria, Pageable pageable) {
         QProject p = QProject.project;
-        JPAQuery<Project> query = new JPAQuery<Project>(em)
+        QGroup g = QGroup.group;
+        QEmployee gl = new QEmployee("groupLeader");
+        JPAQuery<Project> dataQuery = new JPAQuery<Project>(em)
                 .from(p)
-                .leftJoin(p.group, QGroup.group).fetchJoin()
+                .leftJoin(p.group, g).fetchJoin()
+                .leftJoin(g.groupLeader, gl).fetchJoin()
                 .where(criteria != null ? criteria.toPredicate() : null)
                 .orderBy(p.projectNumber.asc())
                 .distinct();
-        long total = (pageable != null && pageable.isPaged()) ? query.fetchCount() : 0;
         if (pageable != null && pageable.isPaged()) {
-            query.offset(pageable.getOffset()).limit(pageable.getPageSize());
+            dataQuery.offset(pageable.getOffset()).limit(pageable.getPageSize());
         }
-        List<Project> content = query.fetch();
-        return new PageImpl<>(content, pageable != null ? pageable : Pageable.unpaged(), total > 0 ? total : content.size());
+        List<Project> content = dataQuery.fetch();
+        JPAQuery<Long> countQuery = new JPAQuery<Long>(em)
+                .select(p.id.count())
+                .from(p)
+                .where(criteria != null ? criteria.toPredicate() : null);
+        return PageableExecutionUtils.getPage(
+                content,
+                pageable != null ? pageable : Pageable.unpaged(),
+                countQuery::fetchOne
+        );
     }
 }
