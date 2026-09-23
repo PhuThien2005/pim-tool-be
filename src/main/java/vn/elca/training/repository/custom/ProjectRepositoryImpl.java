@@ -29,8 +29,8 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
         QEmployee gl = new QEmployee("groupLeader");
         JPAQuery<Project> dataQuery = new JPAQuery<Project>(em)
                 .from(p)
-                .leftJoin(p.group, g).fetchJoin()
-                .leftJoin(g.groupLeader, gl).fetchJoin()
+                .innerJoin(p.group, g).fetchJoin()
+                .innerJoin(g.groupLeader, gl).fetchJoin()
                 .where(criteria != null ? criteria.toPredicate() : null)
                 .distinct();
         Sort sort = (pageable != null) ? pageable.getSort() : Sort.unsorted();
