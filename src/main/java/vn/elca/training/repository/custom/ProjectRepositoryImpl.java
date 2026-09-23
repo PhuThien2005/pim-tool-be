@@ -68,12 +68,6 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
                     dataQuery.orderBy(new OrderSpecifier<>(direction, p.status));
                 } else if ("startDate".equalsIgnoreCase(property)) {
                     dataQuery.orderBy(new OrderSpecifier<>(direction, p.startDate));
-                } else if ("endDate".equalsIgnoreCase(property)) {
-                    dataQuery.orderBy(new OrderSpecifier<>(direction, p.endDate));
-                } else if ("groupId".equalsIgnoreCase(property) || "group".equalsIgnoreCase(property)) {
-                    dataQuery.orderBy(new OrderSpecifier<>(direction, g.id));
-                } else if ("id".equalsIgnoreCase(property)) {
-                    dataQuery.orderBy(new OrderSpecifier<>(direction, p.id));
                 }
             }
             if (!hasProjectNumberSort) {

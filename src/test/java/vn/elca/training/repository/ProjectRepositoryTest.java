@@ -1,307 +1,155 @@
 package vn.elca.training.repository;
 
-import java.time.LocalDate;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
-
-import com.querydsl.jpa.impl.JPAQuery;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.ContextConfiguration;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.transaction.annotation.Transactional;
+import vn.elca.training.model.dto.request.SearchProjectCriteria;
+import vn.elca.training.model.entity.Project;
+import vn.elca.training.model.entity.ProjectStatus;
 
-import vn.elca.training.ApplicationWebConfig;
-import vn.elca.training.dao.GroupRepository;
-import vn.elca.training.model.entity.*;
+import java.time.LocalDate;
 
-@ContextConfiguration(classes = {ApplicationWebConfig.class})
-@RunWith(value = SpringRunner.class)
+@RunWith(SpringRunner.class)
+@SpringBootTest
 @Transactional
 public class ProjectRepositoryTest {
-
-    @PersistenceContext
-    private EntityManager em;
 
     @Autowired
     private ProjectRepository projectRepository;
 
     @Autowired
-    private GroupRepository groupRepository;
+    private org.modelmapper.ModelMapper modelMapper;
 
-    @Autowired
-    private UserRepository userRepository;
+    @Test
+    public void testSearchProjects_EmptyCriteria_ReturnsAll() {
+        SearchProjectCriteria criteria = new SearchProjectCriteria();
+        Page<Project> page = projectRepository.searchProjects(criteria, PageRequest.of(0, 10));
 
-    private Employee createOrGetUser(String username, String role) {
-        Employee existing = userRepository.findUserByUsername(username);
-        if (existing != null) {
-            return existing;
-        }
-        Employee user = new Employee(username, username, role);
-        return userRepository.save(user);
+        Assert.assertNotNull(page);
+        Assert.assertEquals(6, page.getTotalElements());
+        Assert.assertEquals(Integer.valueOf(1001), page.getContent().get(0).getProjectNumber());
     }
 
     @Test
-    public void testCountAll() {
-        projectRepository.save(new Project("KSTA", LocalDate.now()));
-        projectRepository.save(new Project("LAGAPEO", LocalDate.now()));
-        projectRepository.save(new Project("ZHQUEST", LocalDate.now()));
-        projectRepository.save(new Project("SECUTIX", LocalDate.now()));
-        Assert.assertEquals(9, projectRepository.count());
+    public void testSearchProjects_ByKeyword_Number() {
+        SearchProjectCriteria criteria = SearchProjectCriteria.builder()
+                .keyword("1003")
+                .build();
+        Page<Project> page = projectRepository.searchProjects(criteria, PageRequest.of(0, 10));
+
+        Assert.assertEquals(1, page.getTotalElements());
+        Assert.assertEquals("CRYSTAL BALL", page.getContent().get(0).getName());
     }
 
     @Test
-    public void testFindOneWithQueryDSL() {
-        final String PROJECT_NAME = "KSTA";
-        projectRepository.save(new Project(PROJECT_NAME, LocalDate.now()));
-        Project project = new JPAQuery<Project>(em)
-                .from(QProject.project)
-                .where(QProject.project.name.eq(PROJECT_NAME))
-                .fetchFirst();
-        Assert.assertEquals(PROJECT_NAME, project.getName());
+    public void testSearchProjects_ByKeyword_Name() {
+        SearchProjectCriteria criteria = SearchProjectCriteria.builder()
+                .keyword("EFV")
+                .build();
+        Page<Project> page = projectRepository.searchProjects(criteria, PageRequest.of(0, 10));
+
+        Assert.assertEquals(1, page.getTotalElements());
+        Assert.assertEquals(Integer.valueOf(1001), page.getContent().get(0).getProjectNumber());
     }
 
-    /**
-     * Test 1:
-     */
     @Test
-    public void testSaveOneProject() {
-        Project project = new Project("PROJECT_SOLO", LocalDate.of(2026, 12, 31), "CUSTOMER_SOLO", ProjectStatus.NEW);
-        project.setActivated(true);
+    public void testSearchProjects_ByKeyword_Customer() {
+        SearchProjectCriteria criteria = SearchProjectCriteria.builder()
+                .keyword("Customer B")
+                .build();
+        Page<Project> page = projectRepository.searchProjects(criteria, PageRequest.of(0, 10));
 
-        Project savedProject = projectRepository.save(project);
-        Assert.assertNotNull("ID dự án được sinh tự động", savedProject.getId());
-
-        Optional<Project> foundOpt = projectRepository.findById(savedProject.getId());
-        Assert.assertTrue("Dự án tồn tại trong DB", foundOpt.isPresent());
-
-        Project found = foundOpt.get();
-        Assert.assertEquals("PROJECT_SOLO", found.getName());
-        Assert.assertEquals("CUSTOMER_SOLO", found.getCustomer());
-        Assert.assertEquals(ProjectStatus.NEW, found.getProjectStatus());
-        Assert.assertTrue(found.isActivated());
+        Assert.assertEquals(2, page.getTotalElements());
     }
 
-    /**
-     * Test 2:
-     * - Group 1: Leader QMV
-     *     + Project EFV (PL: HTV) -> Developers: TQP, NQN; QA: HNH
-     *     + Project CXTRANET (PL: QKP) -> QA: PLH; Developer: HNL
-     *     + Project CRYSTAL BALL (PL: MKN) -> QA: TBH; Developer: TDN
-     * - Group 2: Leader HNH
-     *     + Project IOC CLIENT EXTRANET (PL: APL) -> Developers: HPN, BNN, PNH; QA: HUN
-     *     + Project KSTA MIGRATION (PL: XHP) -> QA: QMV; Developer: VVT
-     *
-     * - QMV là 1 User: vừa là Group Leader của Group QMV, vừa là Quality Agent (Member) trong KSTA MIGRATION.
-     * - HNH là 1 User: vừa là Group Leader của Group HNH, vừa là Quality Agent (Member) trong EFV.
-     */
     @Test
-    public void testSaveMultipleProjectsTree() {
-        // CÂY 1:QMV làm Group Leader
-        Employee qmv = createOrGetUser("QMV", "Group Leader");
-        Group groupQmv = groupRepository.save(new Group("Group QMV", qmv));
+    public void testSearchProjects_ByStatus() {
+        SearchProjectCriteria criteria = SearchProjectCriteria.builder()
+                .status(ProjectStatus.NEW)
+                .build();
+        Page<Project> page = projectRepository.searchProjects(criteria, PageRequest.of(0, 10));
 
-        // 1. Dự án EFV (PL: HTV)
-        Employee plHtv = createOrGetUser("HTV", "Project Leader");
-        Employee tqp = createOrGetUser("TQP", "Developer");
-        Employee hnh = createOrGetUser("HNH", "Quality Agent");
-        Employee nqn = createOrGetUser("NQN", "Developer");
-
-        Project efv = new Project("EFV_TREE", LocalDate.of(2026, 6, 30), "ELCA", ProjectStatus.INP, groupQmv);
-        efv.setProjectLeader(plHtv);
-        efv.setMembers(new HashSet<>(Arrays.asList(tqp, hnh, nqn)));
-        projectRepository.save(efv);
-
-        // 2. Dự án CXTRANET (PL: QKP)
-        Employee plQkp = createOrGetUser("QKP", "Project Leader");
-        Employee plh = createOrGetUser("PLH", "Quality Agent");
-        Employee hnl = createOrGetUser("HNL", "Developer");
-
-        Project cxtranet = new Project("CXTRANET_TREE", LocalDate.of(2026, 7, 31), "ELCA", ProjectStatus.INP, groupQmv);
-        cxtranet.setProjectLeader(plQkp);
-        cxtranet.setMembers(new HashSet<>(Arrays.asList(plh, hnl)));
-        projectRepository.save(cxtranet);
-
-        // 3. Dự án CRYSTAL BALL (PL: MKN)
-        Employee plMkn = createOrGetUser("MKN", "Project Leader");
-        Employee tbh = createOrGetUser("TBH", "Quality Agent");
-        Employee tdn = createOrGetUser("TDN", "Developer");
-
-        Project crystalBall = new Project("CRYSTAL_BALL_TREE", LocalDate.of(2026, 8, 31), "ELCA", ProjectStatus.PLA, groupQmv);
-        crystalBall.setProjectLeader(plMkn);
-        crystalBall.setMembers(new HashSet<>(Arrays.asList(tbh, tdn)));
-        projectRepository.save(crystalBall);
-
-
-        // CÂY 2: Nhóm do HNH làm Group Leader
-        // HNH là user đã tham gia làm Member (QA) ở dự án EFV phía trên
-
-        Group groupHnh = groupRepository.save(new Group("Group HNH", hnh));
-
-        // 4. Dự án IOC CLIENT EXTRANET (PL: APL)
-        Employee plApl = createOrGetUser("APL", "Project Leader");
-        Employee hpn = createOrGetUser("HPN", "Developer");
-        Employee hun = createOrGetUser("HUN", "Quality Agent");
-        Employee bnn = createOrGetUser("BNN", "Developer");
-        Employee pnh = createOrGetUser("PNH", "Developer");
-
-        Project iocClient = new Project("IOC_CLIENT_EXTRANET_TREE", LocalDate.of(2026, 9, 30), "IOC", ProjectStatus.INP, groupHnh);
-        iocClient.setProjectLeader(plApl);
-        iocClient.setMembers(new HashSet<>(Arrays.asList(hpn, hun, bnn, pnh)));
-        projectRepository.save(iocClient);
-
-        // 5. Dự án KSTA MIGRATION (PL: XHP)
-        Employee plXhp = createOrGetUser("XHP", "Project Leader");
-        // QMV là user làm Group Leader của Group QMV ở trên, tham gia làm Member (QA) ở đây
-        Employee vvt = createOrGetUser("VVT", "Developer");
-
-        Project kstaMigration = new Project("KSTA_MIGRATION_TREE", LocalDate.of(2026, 10, 31), "KSTA", ProjectStatus.PLA, groupHnh);
-        kstaMigration.setProjectLeader(plXhp);
-        kstaMigration.setMembers(new HashSet<>(Arrays.asList(qmv, vvt)));
-        projectRepository.save(kstaMigration);
-
-        em.flush();
-        em.clear();
-
-
-        // KIỂM TRA TOÀN DIỆN DỮ LIỆU CÂY ĐÃ LƯU
-
-        // Xác minh Group 1
-        Group savedGroup1 = groupRepository.findById(groupQmv.getId()).orElse(null);
-        Assert.assertNotNull(savedGroup1);
-        Assert.assertEquals("QMV", savedGroup1.getGroupLeader().getUsername());
-
-        Project savedEfv = projectRepository.findByNameContainingIgnoreCase("EFV_TREE").get(0);
-        Assert.assertEquals("HTV", savedEfv.getProjectLeader().getUsername());
-        Assert.assertEquals(3, savedEfv.getMembers().size());
-        Assert.assertEquals("Group QMV", savedEfv.getGroup().getName());
-        Assert.assertTrue(savedEfv.getMembers().stream().anyMatch(u -> "HNH".equals(u.getUsername())));
-
-        Project savedCxtranet = projectRepository.findByNameContainingIgnoreCase("CXTRANET_TREE").get(0);
-        Assert.assertEquals("QKP", savedCxtranet.getProjectLeader().getUsername());
-        Assert.assertEquals(2, savedCxtranet.getMembers().size());
-
-        Project savedCrystalBall = projectRepository.findByNameContainingIgnoreCase("CRYSTAL_BALL_TREE").get(0);
-        Assert.assertEquals("MKN", savedCrystalBall.getProjectLeader().getUsername());
-        Assert.assertEquals(2, savedCrystalBall.getMembers().size());
-
-        // Xác minh Group 2
-        Group savedGroup2 = groupRepository.findById(groupHnh.getId()).orElse(null);
-        Assert.assertNotNull(savedGroup2);
-        Assert.assertEquals("HNH", savedGroup2.getGroupLeader().getUsername());
-
-        Project savedIoc = projectRepository.findByNameContainingIgnoreCase("IOC_CLIENT_EXTRANET_TREE").get(0);
-        Assert.assertEquals("APL", savedIoc.getProjectLeader().getUsername());
-        Assert.assertEquals(4, savedIoc.getMembers().size());
-
-        Project savedKsta = projectRepository.findByNameContainingIgnoreCase("KSTA_MIGRATION_TREE").get(0);
-        Assert.assertEquals("XHP", savedKsta.getProjectLeader().getUsername());
-        Assert.assertEquals(2, savedKsta.getMembers().size());
-        Assert.assertTrue(savedKsta.getMembers().stream().anyMatch(u -> "QMV".equals(u.getUsername())));
-
-        // Xác minh Object Graph đa chiều: cùng 1 user QMV vừa là Leader Group 1, vừa là Member dự án ở Group 2
-        Employee reloadedQmv = userRepository.findUserByUsername("QMV");
-        Assert.assertEquals(1, reloadedQmv.getLeadingGroups().size());
-        Assert.assertTrue(reloadedQmv.getProjects().stream().anyMatch(p -> "KSTA_MIGRATION_TREE".equals(p.getName())));
-
-        Employee reloadedHnh = userRepository.findUserByUsername("HNH");
-        Assert.assertEquals(1, reloadedHnh.getLeadingGroups().size());
-        Assert.assertTrue(reloadedHnh.getProjects().stream().anyMatch(p -> "EFV_TREE".equals(p.getName())));
+        Assert.assertEquals(2, page.getTotalElements());
+        Assert.assertTrue(page.getContent().stream().allMatch(p -> p.getStatus() == ProjectStatus.NEW));
     }
 
-    /**
-     * Test 3: xóa một dự án qua ProjectRepository
-     */
     @Test
-    public void testDeleteProject() {
-        Project project = new Project("PROJECT_TO_DELETE", LocalDate.now(), "DELETE_CUSTOMER", ProjectStatus.NEW);
-        Project saved = projectRepository.save(project);
-        Long id = saved.getId();
-        Assert.assertNotNull(id);
-        Assert.assertTrue(projectRepository.findById(id).isPresent());
+    public void testSearchProjects_ByLeaderVisa() {
+        SearchProjectCriteria criteria = SearchProjectCriteria.builder()
+                .leaderVisa("DTH")
+                .build();
+        Page<Project> page = projectRepository.searchProjects(criteria, PageRequest.of(0, 10));
 
-
-        projectRepository.delete(saved);
-        em.flush();
-
-
-        Assert.assertFalse("Dự án phải không còn trong cơ sở dữ liệu sau khi xóa", projectRepository.findById(id).isPresent());
+        Assert.assertEquals(2, page.getTotalElements());
+        Assert.assertTrue(page.getContent().stream().allMatch(p -> "DTH".equalsIgnoreCase(p.getGroup().getGroupLeader().getVisa())));
     }
 
-    /**
-     * Test 4:
-     */
     @Test
-    public void testSimpleQueryDSLByNameAndStatus() {
-        projectRepository.save(new Project("PROJECT_ALPHA", LocalDate.now(), "CUSTOMER_A", ProjectStatus.NEW));
-        projectRepository.save(new Project("PROJECT_BETA", LocalDate.now(), "CUSTOMER_B", ProjectStatus.INP));
-        projectRepository.save(new Project("PROJECT_GAMMA", LocalDate.now(), "CUSTOMER_C", ProjectStatus.FIN));
+    public void testSearchProjects_ByMemberVisa() {
+        SearchProjectCriteria criteria = SearchProjectCriteria.builder()
+                .memberVisa("HTV")
+                .build();
+        Page<Project> page = projectRepository.searchProjects(criteria, PageRequest.of(0, 10));
 
-        QProject qProject = QProject.project;
-
-        List<Project> results = new JPAQuery<Project>(em)
-                .from(qProject)
-                .where(qProject.name.eq("PROJECT_BETA")
-                        .and(qProject.status.eq(ProjectStatus.INP)))
-                .fetch();
-
-        Assert.assertEquals("Chỉ được tìm thấy đúng 1 dự án thỏa mãn", 1, results.size());
-        Project found = results.get(0);
-        Assert.assertEquals("PROJECT_BETA", found.getName());
-        Assert.assertEquals(ProjectStatus.INP, found.getProjectStatus());
-        Assert.assertEquals("CUSTOMER_B", found.getCustomer());
+        Assert.assertEquals(2, page.getTotalElements());
     }
 
-    /**
-     * Test 5: Xác minh truy vấn phức tạp bằng QueryDSL kết hợp thuộc tính của Project và thuộc tính quan hệ:
-     * - Thuộc tính Project: name, status
-     * - Thuộc tính quan hệ: group (tên group, group leader) và customer
-     */
     @Test
-    public void testComplexQueryDSLWithRelations() {
-        Employee leader = createOrGetUser("COMPLEX_LEADER", "Group Leader");
-        Group targetGroup = groupRepository.save(new Group("TARGET_GROUP", leader));
-        Group otherGroup = groupRepository.save(new Group("OTHER_GROUP", leader));
+    public void testSearchProjects_ByStartDateRange() {
+        SearchProjectCriteria criteria = SearchProjectCriteria.builder()
+                .startDateFrom(LocalDate.of(2025, 1, 1))
+                .startDateTo(LocalDate.of(2025, 12, 31))
+                .build();
+        Page<Project> page = projectRepository.searchProjects(criteria, PageRequest.of(0, 10));
 
-        Project targetProject = new Project("COMPLEX_TARGET_PROJECT", LocalDate.now(), "ELCA_CUSTOMER", ProjectStatus.INP, targetGroup);
-        Project noiseProject1 = new Project("COMPLEX_TARGET_PROJECT", LocalDate.now(), "OTHER_CUSTOMER", ProjectStatus.INP, targetGroup);
-        Project noiseProject2 = new Project("COMPLEX_TARGET_PROJECT", LocalDate.now(), "ELCA_CUSTOMER", ProjectStatus.FIN, targetGroup);
-        Project noiseProject3 = new Project("COMPLEX_TARGET_PROJECT", LocalDate.now(), "ELCA_CUSTOMER", ProjectStatus.INP, otherGroup);
+        Assert.assertEquals(3, page.getTotalElements());
+    }
 
-        projectRepository.save(targetProject);
-        projectRepository.save(noiseProject1);
-        projectRepository.save(noiseProject2);
-        projectRepository.save(noiseProject3);
+    @Test
+    public void testSearchProjects_Pagination() {
+        SearchProjectCriteria criteria = new SearchProjectCriteria();
+        Page<Project> page = projectRepository.searchProjects(criteria, PageRequest.of(0, 2));
 
-        em.flush();
+        Assert.assertEquals(6, page.getTotalElements());
+        Assert.assertEquals(2, page.getContent().size());
+        Assert.assertEquals(3, page.getTotalPages());
+    }
 
-        QProject qProject = QProject.project;
-        QGroup qGroup = QGroup.group;
+    @Test
+    public void testFindDetailById() {
+        java.util.Optional<Project> projectOptional = projectRepository.findDetailById(1L);
+        Assert.assertTrue(projectOptional.isPresent());
+        Project project = projectOptional.get();
+        Assert.assertNotNull(project.getGroup());
+        Assert.assertNotNull(project.getGroup().getGroupLeader());
+        Assert.assertNotNull(project.getEmployees());
+        Assert.assertFalse(project.getEmployees().isEmpty());
 
-        // Truy vấn phức tạp: JOIN Project với Group, lọc theo cả name, status, customer và group name
-        List<Project> results = new JPAQuery<Project>(em)
-                .from(qProject)
-                .innerJoin(qProject.group, qGroup)
-                .where(qProject.name.eq("COMPLEX_TARGET_PROJECT")
-                        .and(qProject.status.eq(ProjectStatus.INP))
-                        .and(qProject.customer.eq("ELCA_CUSTOMER"))
-                        .and(qGroup.name.eq("TARGET_GROUP"))
-                        .and(qGroup.groupLeader.username.eq("COMPLEX_LEADER")))
-                .fetch();
+        vn.elca.training.model.dto.response.ProjectDetailResponse response =
+                modelMapper.map(project, vn.elca.training.model.dto.response.ProjectDetailResponse.class);
+        Assert.assertNotNull(response);
+        Assert.assertNotNull(response.getGroup());
+        Assert.assertNotNull(response.getGroup().getGroupLeader());
+        Assert.assertEquals(2, response.getEmployees().size());
+    }
 
-        Assert.assertEquals("Chỉ duy nhất 1 dự án thỏa mãn tất cả tiêu chí riêng và quan hệ", 1, results.size());
-        Project matched = results.get(0);
-        Assert.assertEquals("COMPLEX_TARGET_PROJECT", matched.getName());
-        Assert.assertEquals(ProjectStatus.INP, matched.getProjectStatus());
-        Assert.assertEquals("ELCA_CUSTOMER", matched.getCustomer());
-        Assert.assertEquals("TARGET_GROUP", matched.getGroup().getName());
-        Assert.assertEquals("COMPLEX_LEADER", matched.getGroup().getGroupLeader().getUsername());
+    @Test
+    public void testSearchProjects_DynamicSorting_MultiColumn() {
+        SearchProjectCriteria criteria = new SearchProjectCriteria();
+        org.springframework.data.domain.Sort sort = org.springframework.data.domain.Sort.by(
+                org.springframework.data.domain.Sort.Order.desc("status"),
+                org.springframework.data.domain.Sort.Order.asc("projectNumber")
+        );
+        Page<Project> page = projectRepository.searchProjects(criteria, PageRequest.of(0, 10, sort));
+
+        Assert.assertNotNull(page);
+        Assert.assertEquals(6, page.getTotalElements());
+        Assert.assertFalse(page.getContent().isEmpty());
     }
 }
