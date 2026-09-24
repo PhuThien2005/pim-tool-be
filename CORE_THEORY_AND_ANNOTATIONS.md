@@ -10,7 +10,7 @@ Tài liệu này tổng hợp toàn bộ các điểm lý thuyết cốt lõi (C
    - [1.1. Kiến Trúc 3 Tầng (3-Tier Layered Architecture) & Phân Tách Trách Nhiệm (SoC)](#11-kiến-trúc-3-tầng-3-tier-layered-architecture--phân-tách-trách-nhiệm-soc)
    - [1.2. Mẫu DTO & Tại Sao Không Được Expose JPA Entity Ra Controller?](#12-mẫu-dto--tại-sao-không-được-expose-jpa-entity-ra-controller)
    - [1.3. Bài Toán N+1 Query & So Sánh Chuyên Sâu `@EntityGraph` vs `@BatchSize`](#13-bài-toán-n1-query--so-sánh-chuyên-sâu-entitygraph-vs-batchsize)
-   - [1.4. Kiểm Soát Cạnh Tranh Đồng Thời & Khóa Lạc Quan (Optimistic Locking)](#14-kiểm-soát-cạnh-tranh-đồng-thời--khóa-lạc-quan-optimistic-locking)
+   - [1.4. Kiểm Soát Cạnh Tranh Đồng Thời (Concurrency Control): Khóa Lạc Quan (`@Version`) vs Hiểm Họa TOCTOU & `DataIntegrityViolationException`](#14-kiểm-soát-cạnh-tranh-đồng-thời-concurrency-control-khóa-lạc-quan-version-vs-hiểm-họa-toctou--dataintegrityviolationexception)
    - [1.5. Tối Ưu Phân Trang: `Page<T>` vs `Slice<T>` & Cấu Trúc Chi Tiết Của `Page<T>`](#15-tối-ưu-phân-trang-paget-vs-slicet--cấu-trúc-chi-tiết-của-paget)
    - [1.6. Cơ Chế Sinh Khóa Chính: `SEQUENCE` vs `IDENTITY` & Cơ Chế Write-Behind](#16-cơ-chế-sinh-khóa-chính-sequence-vs-identity--cơ-chế-write-behind)
    - [1.7. Thiết Kế Thực Thể Cơ Sở (`@MappedSuperclass`) & Ràng Buộc Khóa Chính](#17-thiết-kế-thực-thể-cơ-sở-mappedsuperclass--ràng-buộc-khóa-chính)
@@ -82,18 +82,13 @@ Trong dự án, chúng ta tách biệt hoàn toàn giữa `Entity` ([`Project`](
 
 ---
 
-### 1.3. Bài Toán N+1 Query & So Sánh Chuyên Sâu `@EntityGraph` vs `@BatchSize`
+### 1.3. Bài Toán N+1 Query, Phân Tích Chuyên Sâu QueryDSL Trong `searchProjects` & So Sánh `@EntityGraph` vs `@BatchSize`
 
-
-Viewed ProjectServiceImpl.java:1-185
-Viewed GroupListResponse.java:1-15
-Viewed SearchProjectCriteria.java:1-76
-
-Dưới đây là bản phân tích toàn diện và chi tiết nhất về hàm `searchProjects` trong [`ProjectRepositoryImpl.java`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/main/java/vn/elca/training/repository/custom/ProjectRepositoryImpl.java), từ bản chất của QueryDSL, Q-classes, `toPredicate` cho đến lý do sâu xa tại sao lại cần `FETCH JOIN` cả 3 bảng:
+Dưới đây là bản phân tích toàn diện về phương thức `searchProjects` trong [`ProjectRepositoryImpl.java`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/main/java/vn/elca/training/repository/custom/ProjectRepositoryImpl.java), từ bản chất của QueryDSL, Q-classes, `toPredicate` cho đến lý do tại sao sử dụng `INNER JOIN FETCH` cả 3 bảng:
 
 ---
 
-### 1. QueryDSL, Q-Class & `JPAQuery` Là Gì?
+#### 1.3.1. QueryDSL, Q-Class & `JPAQuery` Là Gì?
 
 ```
 [ Entity: Project.java ] 
@@ -105,11 +100,11 @@ Dưới đây là bản phân tích toàn diện và chi tiết nhất về hàm
 [ JPAQuery<Project>(em) ] ──► Viết Fluent API Type-safe ──► Sinh SQL Chuẩn 100%
 ```
 
-#### A. QueryDSL là gì và tại sao lại dùng nó?
+##### A. QueryDSL là gì và tại sao lại dùng nó?
 - **Vấn đề của JPQL/Native SQL String truyền thống**: Viết câu lệnh bằng chuỗi `"SELECT p FROM Project p WHERE p.name = :name"`. Rất dễ gõ sai chính tả tên cột (ví dụ gõ nhầm `projectNumver`), và trình biên dịch Java hoàn toàn không phát hiện được, chỉ khi chạy ứng dụng (Runtime) mới ném lỗi sập API.
 - **Giải pháp của QueryDSL**: Cung cấp cơ chế **Type-safe Query**. Mọi bảng và cột được đại diện bằng các đối tượng và phương thức Java. Nếu bạn gõ sai tên thuộc tính, IDE và Maven sẽ báo lỗi biên dịch ngay lập tức (Compile-time verification).
 
-#### B. Q-Classes (`QProject`, `QGroup`, `QEmployee`) là gì?
+##### B. Q-Classes (`QProject`, `QGroup`, `QEmployee`) là gì?
 - Đây là các lớp Java đặc biệt do công cụ **APT (Annotation Processing Tool)** của QueryDSL tự động sinh ra trong thư mục `target/generated-sources/java` khi bạn chạy `mvn compile`.
 - Q-Class đóng vai trò là **Bản đồ siêu dữ liệu (Metadata Path)** của Entity:
     - `p.name` là một `StringPath` $\rightarrow$ Cung cấp các hàm chuỗi: `.containsIgnoreCase()`, `.startsWith()`, `.like()`.
@@ -117,20 +112,20 @@ Dưới đây là bản phân tích toàn diện và chi tiết nhất về hàm
     - `p.startDate` là một `DatePath<LocalDate>` $\rightarrow$ Cung cấp: `.before()`, `.after()`, `.between()`.
     - `p.group` là một `QGroup` $\rightarrow$ Cho phép chấm tiếp sang trường con: `p.group.groupLeader.visa`.
 
-#### C. Tại sao lại viết: `QEmployee gl = new QEmployee("groupLeader")`?
+##### C. Tại sao lại viết: `QEmployee gl = new QEmployee("groupLeader")`?
 - Mặc định, `QEmployee.employee` tĩnh có Table Alias là `"employee"`.
 - Nhưng trong một dự án, bảng `EMPLOYEE` có thể đóng **2 vai trò khác nhau trong cùng 1 câu truy vấn**:
     1. Vai trò là **Trưởng nhóm (Group Leader)**.
     2. Vai trò là **Thành viên dự án (Project Members)**.
-- Khởi tạo `new QEmployee("groupLeader")` giúp đặt tên **Table Alias riêng biệt** cho nó trong câu lệnh SQL (`LEFT JOIN EMPLOYEE groupLeader ON ...`), tránh xung đột và nhầm lẫn với các alias khác.
+- Khởi tạo `new QEmployee("groupLeader")` giúp đặt tên **Table Alias riêng biệt** cho nó trong câu lệnh SQL (`INNER JOIN EMPLOYEE groupLeader ON ...`), tránh xung đột và nhầm lẫn với các alias khác.
 
-#### D. `JPAQuery<T>` là gì?
+##### D. `JPAQuery<T>` là gì?
 - Là đối tượng trung tâm của QueryDSL kết nối trực tiếp với `EntityManager` của JPA.
-- Cung cấp Fluent Builder để ráp nối câu lệnh: `.from(...)`, `.leftJoin(...)`, `.where(...)`, `.distinct()`, `.fetch()`.
+- Cung cấp Fluent Builder để ráp nối câu lệnh: `.from(...)`, `.innerJoin(...)`, `.where(...)`, `.distinct()`, `.fetch()`.
 
 ---
 
-### 2. Bản Chất Của `criteria.toPredicate()`
+#### 1.3.2. Bản Chất Của `criteria.toPredicate()`
 
 `Predicate` trong QueryDSL là đại diện cho **mệnh đề điều kiện `WHERE`** trong SQL.
 
@@ -153,7 +148,7 @@ public Predicate toPredicate() {
 }
 ```
 
-#### Điểm ma thuật của `BooleanBuilder`:
+##### Điểm ma thuật của `BooleanBuilder`:
 - Nếu bất kỳ vế nào truyền vào là `null`, `BooleanBuilder` **tự động bỏ qua không sinh vào SQL**!
 - Ví dụ:
     - Nếu người dùng chỉ tìm theo `keyword = "EFV"`, SQL sinh ra chỉ có: `WHERE (LOWER(p.name) LIKE '%efv%' OR LOWER(p.customer) LIKE '%efv%')`.
@@ -162,45 +157,43 @@ public Predicate toPredicate() {
 
 ---
 
-### 3. Có Phải Đang Dùng `fetchJoin()` Không?
+#### 1.3.3. Có Phải Đang Dùng `fetchJoin()` Không?
 
 **CHÍNH XÁC 100%!** Đoạn code trong [`ProjectRepositoryImpl.java`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/main/java/vn/elca/training/repository/custom/ProjectRepositoryImpl.java):
 ```java
 JPAQuery<Project> dataQuery = new JPAQuery<Project>(em)
         .from(p)
-        .leftJoin(p.group, g).fetchJoin()
-        .leftJoin(g.groupLeader, gl).fetchJoin()
+        .innerJoin(p.group, g).fetchJoin()
+        .innerJoin(g.groupLeader, gl).fetchJoin()
         .where(criteria != null ? criteria.toPredicate() : null)
         .distinct();
 ```
-- `.leftJoin(p.group, g).fetchJoin()` $\rightarrow$ Chính là cú pháp `LEFT JOIN FETCH p.group g` trong JPQL.
-- `.leftJoin(g.groupLeader, gl).fetchJoin()` $\rightarrow$ Chính là `LEFT JOIN FETCH g.groupLeader gl`.
+- `.innerJoin(p.group, g).fetchJoin()` $\rightarrow$ Chính là cú pháp `INNER JOIN FETCH p.group g` trong JPQL.
+- `.innerJoin(g.groupLeader, gl).fetchJoin()` $\rightarrow$ Chính là `INNER JOIN FETCH g.groupLeader gl`.
 
 ---
 
-### 4. Tại Sao Lại Cần JOIN Cả 3 Bảng (`PROJECT` $\rightarrow$ `GROUP` $\rightarrow$ `EMPLOYEE` Leader)?
-
-Đây chính là câu chuyện thực tế mà bạn từng xử lý:
+#### 1.3.4. Tại Sao Lại Cần JOIN Cả 3 Bảng (`PROJECT` $\rightarrow$ `GROUP` $\rightarrow$ `EMPLOYEE` Leader)?
 
 ```
 [ Bảng PROJECT ] ──(GROUP_ID)──► [ Bảng GROUP ] ──(GROUP_LEADER_ID)──► [ Bảng EMPLOYEE (Leader) ]
 ```
 
-#### Lý do 1: Bản chất quan hệ dữ liệu là phân cấp gián tiếp
+##### Lý do 1: Bản chất quan hệ dữ liệu là phân cấp gián tiếp
 Trong cơ sở dữ liệu:
 - Bảng `PROJECT` **KHÔNG HỀ CÓ CỘT NÀO LƯU TRỰC TIẾP LEADER ID**! Nó chỉ có cột `GROUP_ID`.
 - Muốn biết ai là Leader của dự án, bắt buộc phải đi theo đường dẫn:
   $$\text{PROJECT} \xrightarrow{\text{GROUP\_ID}} \text{GROUP} \xrightarrow{\text{GROUP\_LEADER\_ID}} \text{EMPLOYEE}$$
 
-#### Lý do 2: Cạm bẫy N+1 Query & `LazyInitializationException` khi Map DTO (Đúng như bạn nhớ!)
+##### Lý do 2: Cạm bẫy N+1 Query & `LazyInitializationException` khi Map DTO
 Cả 2 quan hệ trong Entity đều đặt `FetchType.LAZY`:
 ```java
 // Trong Project.java:
-@ManyToOne(fetch = FetchType.LAZY)
+@ManyToOne(fetch = FetchType.LAZY, optional = false)
 private Group group;
 
 // Trong Group.java:
-@OneToOne(fetch = FetchType.LAZY)
+@OneToOne(fetch = FetchType.LAZY, optional = false)
 private Employee groupLeader;
 ```
 
@@ -219,14 +212,25 @@ private Employee groupLeader;
 👉 **Khi thêm 2 dòng `.fetchJoin()` trên**:
 Hibernate ép Database nối phẳng cả 3 bảng và nạp đầy đủ dữ liệu của `Project`, `Group`, và `groupLeader` **CHỈ TRONG ĐÚNG 1 CÂU LỆNH SQL DUY NHẤT**! Cả 3 đối tượng đều đã có sẵn trong bộ nhớ RAM, loại bỏ hoàn toàn 100% N+1 query và triệt tiêu vĩnh viễn lỗi Lazy Proxy.
 
-#### Lý do 3: Phục vụ Lọc Nâng Cao (`leaderVisa`)
+##### Lý do 3: Phục vụ Lọc Nâng Cao (`leaderVisa`)
 Khi người dùng tìm kiếm theo visa trưởng nhóm (`leaderVisa = 'DTH'`), câu lệnh SQL bắt buộc phải kiểm tra điều kiện trên cột `VISA` của bảng `EMPLOYEE` đại diện cho leader. Nếu không join từ `Project` sang `Group` rồi sang `Employee`, database sẽ không có dữ liệu để thực hiện điều kiện `WHERE gl.VISA = 'DTH'`.
 
-#### Lý do 4: Tại sao bắt buộc dùng `LEFT JOIN` mà không dùng `INNER JOIN`?
-- Trong thực tế, có thể có những Project mới tạo chưa kịp gán `group` (hoặc `groupId` null).
-- Hoặc một `Group` mới lập chưa kịp bổ nhiệm `groupLeader`.
-- Nếu dùng `INNER JOIN`: Toàn bộ các Project chưa có Group hoặc Group chưa có Leader sẽ **bị loại bỏ hoàn toàn và biến mất khỏi bảng kết quả tìm kiếm**!
-- Dùng `LEFT JOIN` (Left Outer Join) đảm bảo rằng: Dù Project chưa có Group thì **dòng Project đó vẫn luôn xuất hiện đầy đủ trên màn hình của người dùng**.
+##### Lý do 4: Tại Sao Dùng `INNER JOIN` Mà Không Cần `LEFT JOIN` Khi Có `optional = false`?
+- **Ràng buộc dữ liệu chặt chẽ**:
+  - `Project.group`: `@ManyToOne(fetch = FetchType.LAZY, optional = false)` và `@JoinColumn(name = "GROUP_ID", nullable = false)`.
+  - `Group.groupLeader`: `@OneToOne(fetch = FetchType.LAZY, optional = false)` và `@JoinColumn(name = "GROUP_LEADER_ID", nullable = false)`.
+  - Hai ràng buộc `optional = false` và `nullable = false` cam kết 100% rằng:
+    - **Không bao giờ có Project nào không có Group**.
+    - **Không bao giờ có Group nào không có Leader**.
+- **`INNER JOIN` là chuẩn xác tuyệt đối về mặt ngữ nghĩa dữ liệu**:
+  Vì hai phía luôn luôn có dữ liệu khớp nhau, việc dùng `INNER JOIN` là hoàn toàn tự nhiên và phản ánh đúng bản chất mô hình quan hệ.
+- **Tối ưu hóa vượt trội cho Database Query Optimizer (Join Reordering)**:
+  - Với **`LEFT JOIN`**: Database Optimizer **bị ép buộc** phải quét toàn bộ bảng bên trái (`PROJECT`) trước, sau đó mới tìm các dòng tương ứng ở bảng bên phải. Thứ tự duyệt bảng bị cố định cứng.
+  - Với **`INNER JOIN`**: Database Cost-Based Optimizer có quyền **Join Reordering (Tự do đảo thứ tự duyệt bảng)**:
+    - Ví dụ khi người dùng lọc `leaderVisa = 'DTH'`, DB có thể dùng index trên `EMPLOYEE.VISA` để tìm ra ngay 1 người Leader trong bảng `EMPLOYEE` với độ phức tạp $O(1)$, rồi mới join ngược lại `GROUP` $\rightarrow$ `PROJECT`.
+    - Lượng dữ liệu phải đọc giảm đi hàng trăm, hàng ngàn lần so với việc phải quét toàn bộ bảng `PROJECT` của `LEFT JOIN`!
+- **Khi nào mới cần `LEFT JOIN`?**:
+  Chỉ khi mối quan hệ là tùy chọn (`optional = true`, ví dụ một dự án có thể chưa được phân nhóm `groupId = null`), ta mới dùng `LEFT JOIN` để tránh làm mất các dự án chưa có nhóm khỏi kết quả tìm kiếm. Khi đã có `optional = false`, `INNER JOIN` luôn là sự lựa chọn ưu việt nhất.
 
 #### Bản chất của bài toán N+1 Query
 Khi truy vấn danh sách gồm $N$ bản ghi dự án, mỗi dự án có quan hệ `Lazy` với `Group` hoặc `Employees`.
@@ -247,6 +251,107 @@ Nếu $N = 1000$, database sẽ phải chịu tải $1001$ truy vấn mạng ri�
    Để không trả về sai số lượng Entity, Hibernate **bỏ qua hoàn toàn mệnh đề LIMIT/OFFSET dưới SQL**, nạp **TOÀN BỘ** hàng triệu bản ghi từ database vào bộ nhớ RAM của ứng dụng rồi mới tự dùng code Java cắt trang! Điều này dẫn tới nguy cơ sập máy chủ vì tràn bộ nhớ (`java.lang.OutOfMemoryError`).
 
 #### Cơ chế giải quyết hoàn hảo của `@BatchSize` (Under The Hood)
+Trong trường hợp bình thường (không có phân trang hoặc chỉ là query danh sách đơn giản), `@BatchSize` giải quyết bài toán kinh điển mang tên **N + 1 Query**.
+
+Hãy so sánh trực tiếp cơ chế khi **KHÔNG DÙNG** và khi **CÓ DÙNG** `@BatchSize` để thấy cách nó hoạt động ngầm bên dưới (Under the hood):
+
+---
+
+### 1. Khi KHÔNG CÓ `@BatchSize` (Bị dính lỗi N + 1)
+
+Giả sử bạn query lấy danh sách 10 dự án:
+
+```java
+// 1 câu query lấy danh sách cha
+List<Project> projects = projectRepository.findAll(); 
+
+for (Project p : projects) {
+    // Mỗi lần chạm vào getEmployees(), Hibernate lại bắn 1 câu query riêng rẽ
+    System.out.println(p.getEmployees().size());
+}
+
+```
+
+* **Câu 1:** Hibernate lấy 10 dự án:
+```sql
+SELECT * FROM project; -- Trả về 10 projects (ID từ 1 đến 10)
+
+```
+
+
+* **N câu tiếp theo:** Đến vòng lặp, khi duyệt tới từng project và gọi `p.getEmployees()`, Hibernate thấy collection này là `LAZY` và chưa có dữ liệu trong RAM, nó lập tức bắn tiếp:
+```sql
+SELECT * FROM employee WHERE project_id = 1;
+SELECT * FROM employee WHERE project_id = 2;
+SELECT * FROM employee WHERE project_id = 3;
+...
+SELECT * FROM employee WHERE project_id = 10;
+
+```
+
+
+
+$\rightarrow$ **Tổng cộng:** **1** câu query cha + **10** câu query con = **11 câu SQL** gửi xuống database. Nếu có 1.000 dự án thì sẽ là 1.001 câu SQL (Database nghẽn vì chịu quá nhiều network round-trip).
+
+---
+
+### 2. Khi CÓ `@BatchSize(size = 5)` hoặc cấu hình `default_batch_fetch_size: 5`
+
+Cơ chế của Hibernate sẽ thay đổi hoàn toàn nhờ **First-Level Cache (Hibernate Session)**:
+
+```java
+List<Project> projects = projectRepository.findAll(); // Lấy 10 projects (ID: 1 -> 10)
+
+```
+
+1. **Hibernate biết trước các Entity chưa nạp con:**
+   Khi câu query đầu tiên chạy xong, cả 10 đối tượng `Project` đều đang nằm trong Session của Hibernate. Hibernate ghi nhận rằng: *Cả 10 ông Project này đều đang có tập hợp `employees` ở trạng thái chưa nạp (uninitialized proxy)*.
+2. **Gom nhóm kích hoạt khi đụng vào phần tử đầu tiên:**
+   Khi bạn chạy vào vòng for và gọi phần tử đầu tiên:
+```java
+projects.get(0).getEmployees(); // Project ID = 1 cần lấy nhân viên
+
+```
+
+
+* Thay vì chỉ đi tìm nhân viên cho mỗi ID = 1, Hibernate nhìn vào Session và thấy: *"À, có cấu hình `batch_size = 5`. Trong Session đang có tận 10 Project chưa nạp nhân viên. Vậy mình sẽ tiện tay gom luôn 5 ID đầu tiên lại để query một thể!"*
+* Hibernate lập tức sinh ra **1 câu SQL duy nhất** dùng mệnh đề `IN`:
+```sql
+SELECT * FROM employee WHERE project_id IN (1, 2, 3, 4, 5);
+
+```
+
+
+
+
+3. **Tự động phân phát vào RAM:**
+   Nhận kết quả từ câu `IN` về, Hibernate tự nhét nhân viên vào đúng `Set<Employee>` của cả 5 project (từ 1 đến 5).
+4. **Tận dụng dữ liệu có sẵn cho các vòng lặp tiếp theo:**
+* Khi vòng for lặp tiếp đến `projects.get(1).getEmployees()` (ID = 2): Dữ liệu **đã có sẵn trong RAM** từ câu `IN` trước đó $\rightarrow$ Không bắn thêm câu SQL nào.
+* Đến ID = 3, 4, 5: Vẫn có sẵn trong RAM $\rightarrow$ Không bắn SQL.
+* Đến `projects.get(5).getEmployees()` (ID = 6): Dữ liệu chưa có, Hibernate lại gom tiếp 5 ID còn lại (6, 7, 8, 9, 10) và bắn câu query thứ hai:
+```sql
+SELECT * FROM employee WHERE project_id IN (6, 7, 8, 9, 10);
+
+```
+
+
+
+
+
+---
+
+### Kết quả so sánh
+
+* **Không có `@BatchSize`:** Chạy mất **11 câu SQL** ($1 + 10$).
+* **Có `@BatchSize(size = 5)`:** Chỉ mất đúng **3 câu SQL**:
+* 1 câu lấy danh sách Project.
+* 1 câu `IN (1, 2, 3, 4, 5)` cho 5 project đầu.
+* 1 câu `IN (6, 7, 8, 9, 10)` cho 5 project sau.
+
+
+
+Nếu đặt `batch_size = 50` hoặc `100`, thì 10 bản ghi đó sẽ được gom hết vào **đúng 1 câu `IN` duy nhất**, biến bài toán từ $1 + N$ câu lệnh thành vỏn vẹn **2 câu lệnh SQL**.
 Để vừa phân trang chuẩn xác dưới Database bằng `LIMIT / OFFSET`, vừa triệt tiêu bài toán N+1 Query mà không bị OOM, `@BatchSize` là giải pháp tối ưu:
 1. **Bước 1 (Query gốc)**: Hibernate thực hiện câu query chính lấy dữ liệu bảng cha **KHÔNG JOIN VỚI COLLECTION CON**:
    ```sql
@@ -267,29 +372,232 @@ Nếu $N = 1000$, database sẽ phải chịu tải $1001$ truy vấn mạng ri�
 
 ---
 
-### 1.4. Kiểm Soát Cạnh Tranh Đồng Thời & Khóa Lạc Quan (Optimistic Locking)
+### 1.4. Kiểm Soát Cạnh Tranh Đồng Thời (Concurrency Control): Khóa Lạc Quan (`@Version`) vs Hiểm Họa TOCTOU & Vi Phạm Toàn Vẹn Dữ Liệu (`DataIntegrityViolationException`)
 
-#### Bài toán Cập nhật Bị Mất (Lost Update Problem)
-- User A và User B cùng mở chi tiết Project số 1001 tại cùng một thời điểm. Cả hai đều thấy thông tin phiên bản ban đầu.
-- User A chỉnh sửa khách hàng thành "Customer Alpha" và bấm Lưu lúc 10:00:00.
-- User B chỉnh sửa tên dự án thành "Beta New" và bấm Lưu lúc 10:00:05.
-- Nếu không có cơ chế kiểm soát, dữ liệu của User A sẽ bị User B vô tình ghi đè toàn bộ mà User B không hề hay biết.
+Trong các hệ thống phần mềm doanh nghiệp đa người dùng (Multi-tenant, Multi-threaded Enterprise Systems), các luồng xử lý (threads) liên tục đọc và ghi dữ liệu đồng thời vào cùng một bảng database. Nếu không có cơ chế kiểm soát cạnh tranh chặt chẽ, hệ thống sẽ đối mặt với 2 vấn đề toàn vẹn dữ liệu nghiêm trọng:
+1. **Bài toán Cập nhật Bị mất (Lost Update Problem)** khi nhiều người dùng cùng chỉnh sửa một bản ghi hiện có (`UPDATE`/`DELETE`).
+2. **Bài toán Xung đột Khóa Duy nhất Đồng thời (Concurrent Unique Violation / TOCTOU)** khi nhiều người dùng cùng tạo mới bản ghi với cùng một mã định danh (`INSERT`).
 
-#### Cơ chế Khóa Lạc Quan với `@Version`
-Thay vì khóa cứng dòng dữ liệu ở database (Pessimistic Locking - làm nghẽn kết nối và giảm throughput), hệ thống sử dụng **Optimistic Locking**:
-1. Entity [`AbstractEntity`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/main/java/vn/elca/training/model/entity/AbstractEntity.java) bổ sung trường `@Version private Long version;`.
-2. Mỗi lần cập nhật, Hibernate tự động sinh câu lệnh SQL có điều kiện kiểm tra phiên bản:
+Dưới đây là bản phân tích kiến trúc chuyên sâu về hai cơ chế phòng vệ tương ứng:
+
+---
+
+#### 1.4.1. Cạnh Tranh Khi Cập Nhật (UPDATE): Khóa Lạc Quan (Optimistic Locking) Với `@Version`
+
+##### A. Bài toán Cập nhật Bị mất (Lost Update Problem)
+- **Tình huống thực tế**:
+  - Lúc 10:00:00, User A mở chi tiết dự án ID `1` (tên: "EFV", khách hàng: "Customer A", version = `0`).
+  - Lúc 10:00:02, User B cũng mở chi tiết dự án ID `1` (cùng nhận version = `0`).
+  - Lúc 10:00:05, User A sửa khách hàng thành "Canton de Vaud" và bấm Lưu. Hệ thống ghi nhận thành công, version trong DB nhảy lên `1`.
+  - Lúc 10:00:10, User B (vẫn đang nhìn thấy màn hình cũ) sửa tên dự án thành "EFV Tax Portal" và bấm Lưu.
+- **Nếu không có khóa**: Lệnh lưu của User B sẽ ghi đè đè bẹp thay đổi "Canton de Vaud" của User A mà không hề hay biết. Thay đổi của User A bị mất vĩnh viễn (Lost Update).
+
+##### B. Tại sao chọn Khóa Lạc Quan (Optimistic Locking) thay vì Khóa Bi Quan (Pessimistic Locking)?
+- **Khóa Bi Quan (`Pessimistic Locking` - `SELECT ... FOR UPDATE`)**: 
+  - Đặt cờ khóa cứng hàng dữ liệu dưới Database ngay khi User A mở xem. Bất kỳ ai khác (User B) muốn đọc/sửa đều phải chờ (blocking) cho tới khi User A bấm Lưu hoặc tắt trình duyệt.
+  - **Nhược điểm nghiêm trọng**: Gây nghẽn kết nối (Connection Pool Starvation), dễ dẫn tới Deadlock, làm giảm sút thảm hại khả năng mở rộng (Scalability) của hệ thống web.
+- **Khóa Lạc Quan (`Optimistic Locking`)**:
+  - Không hề khóa bất kỳ dòng nào dưới database trong suốt thời gian người dùng thao tác trên màn hình. Cho phép hàng ngàn người dùng cùng đọc đồng thời với tốc độ tối đa.
+  - Chỉ kiểm tra phiên bản tại tích tắc duy nhất khi câu lệnh `UPDATE` thực sự được gửi xuống Database.
+
+##### C. Cơ chế hoạt động ngầm dưới Database (Under The Hood)
+Trong lớp cơ sở [`AbstractBaseEntity.java`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/main/java/vn/elca/training/model/entity/AbstractBaseEntity.java):
+```java
+@Version
+@Column(name = "VERSION", nullable = false)
+private Long version;
+```
+1. Khi câu lệnh cập nhật được thực thi, Hibernate tự động chèn thêm điều kiện so khớp phiên bản vào mệnh đề `WHERE` của câu SQL:
    ```sql
    UPDATE PROJECT 
-   SET NAME = ?, CUSTOMER = ?, VERSION = VERSION + 1 
-   WHERE ID = ? AND VERSION = ?;
+   SET NAME = 'EFV Tax Portal', CUSTOMER = 'Canton de Vaud', VERSION = 1 
+   WHERE ID = 1 AND VERSION = 0;
    ```
-3. Nếu User B gửi lên `version = 1`, nhưng trước đó User A đã cập nhật khiến version trong DB nhảy lên `2`:
-   - Câu lệnh `UPDATE` của User B trả về số dòng ảnh hưởng bằng `0` (`row count = 0`).
-   - Hibernate phát hiện bất thường và ném ra ngoại lệ `StaleObjectStateException`, được Spring dịch thành `ObjectOptimisticLockingFailureException`.
-   - Backend bắt ngoại lệ này tại [`GlobalExceptionHandler`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/main/java/vn/elca/training/exception/GlobalExceptionHandler.java) và trả về mã lỗi HTTP `409 Conflict` kèm thông báo cho Frontend yêu cầu nạp lại dữ liệu mới nhất.
-4. **Tại sao nên dùng kiểu `Long` cho `@Version`?**:
-   Kiểu `Long` (64-bit signed integer) có giá trị cực đại là $2^{63}-1 \approx 9.22 \times 10^{18}$, đảm bảo không bao giờ bị tràn số (overflow) ngay cả khi một bản ghi được cập nhật liên tục hàng triệu lần trong nhiều thập kỷ.
+2. **Kiểm tra số dòng ảnh hưởng (`affected rows`)**:
+   - Nếu User A cập nhật trước: Số dòng tìm thấy là `1` $\rightarrow$ Thành công! Giá trị `VERSION` trong DB nhảy lên `1`.
+   - Khi User B gửi yêu cầu cập nhật kèm `VERSION = 0`: Do `VERSION` dưới DB lúc này đã là `1`, câu lệnh `WHERE ID = 1 AND VERSION = 0` không tìm thấy dòng nào $\rightarrow$ **`affected rows = 0`**.
+3. **Phản ứng của Hibernate & Spring**:
+   - Hibernate phát hiện `affected rows = 0` và lập tức ném ngoại lệ `org.hibernate.StaleObjectStateException`.
+   - Spring Framework bắt lấy ngoại lệ này và chuyển đổi (translate) thành `org.springframework.orm.ObjectOptimisticLockingFailureException`.
+   - Bộ xử lý lỗi [`GlobalExceptionHandler.java`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/main/java/vn/elca/training/controller/GlobalExceptionHandler.java) bắt được ngoại lệ này và trả về mã HTTP chuẩn RESTful: **`409 Conflict`** với mã lỗi `OPTIMISTIC_LOCK_ERROR`.
+
+##### D. Tại sao bắt buộc dùng kiểu `Long` cho trường `@Version`?
+- Kiểu `Long` (64-bit signed integer) có giá trị cực đại là $2^{63}-1 \approx 9.22 \times 10^{18}$ (hơn 9 tỷ tỷ).
+- Nếu sử dụng kiểu `Integer` (32-bit), giá trị tối đa là khoảng $2.14$ tỷ. Trong các hệ thống giao dịch lớn xử lý hàng triệu transaction mỗi ngày, trường version có nguy cơ bị tràn số (integer overflow) quay về số âm sau vài năm vận hành. Kiểu `Long` loại bỏ vĩnh viễn rủi ro này.
+
+##### E. Phân tích sống còn: Tại sao BẮT BUỘC dùng `saveAndFlush()` thay vì `save()` trong `updateProject`?
+Trong [`ProjectServiceImpl.java`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/main/java/vn/elca/training/service/impl/ProjectServiceImpl.java#L109-L110):
+```java
+Project updated = projectRepository.saveAndFlush(project);
+return modelMapper.map(updated, ProjectDetailResponse.class);
+```
+
+Đây là điểm kỹ thuật cực kỳ tinh tế liên quan đến cơ chế **Write-Behind (Trì hoãn ghi)** của Hibernate:
+1. **Nếu chỉ gọi `save(project)` thông thường**:
+   - Hibernate chỉ lưu trạng thái bẩn (dirty) vào bộ nhớ đệm (Persistence Context / ActionQueue) và **CHƯA HỀ BẮN CÂU SQL `UPDATE` XUỐNG DB**.
+   - Vì câu lệnh `UPDATE` chưa chạy, **giá trị thuộc tính `project.version` trong RAM vẫn là `0`**!
+   - Đến dòng kế tiếp `modelMapper.map(updated, ProjectDetailResponse.class)`, đối tượng DTO trả về cho client sẽ mang giá trị **`version: 0`**.
+   - Khi phương thức kết thúc và Transaction commit, câu lệnh `UPDATE` mới thực sự chạy xuống DB và nâng version trong DB lên **`1`**.
+   - 💥 **Hậu quả**: Database lưu `version = 1`, nhưng Frontend lại nhận được `version = 0`. Khi người dùng tiếp tục bấm nút Lưu lần 2 trên giao diện, Frontend gửi lên `version = 0` $\rightarrow$ Backend lập tức báo lỗi **Optimistic Locking giả/ảo** dù không hề có ai khác sửa dự án!
+2. **Khi gọi `saveAndFlush(project)`**:
+   - Lệnh `flush()` ép Hibernate **bắn ngay lập tức câu SQL `UPDATE` xuống Database** trong thời gian thực thi phương thức.
+   - Khi câu SQL `UPDATE` thành công, Hibernate tự động cập nhật thuộc tính trong bộ nhớ Java: **`project.version` nhảy ngay từ `0` lên `1`**.
+   - Nhờ đó, hàm `modelMapper.map(...)` lấy được chuẩn xác giá trị **`version: 1`** để trả về cho Frontend trong response.
+3. **Kích hoạt lỗi sớm (Fail-Fast)**:
+   - Nếu có ai đó đã sửa trước, lệnh `flush()` sẽ làm văng ngoại lệ `OptimisticLockException` **ngay tại dòng code đó**, nằm trọn vẹn trong khối quản lý của Service, thay vì bị trì hoãn tới tận lúc transaction commit ngoài tầm kiểm soát.
+
+---
+
+#### 1.4.2. Cạnh Tranh Khi Tạo Mới (INSERT): Hiểm Họa TOCTOU & `DataIntegrityViolationException`
+
+##### A. Lỗ hổng TOCTOU (Time-Of-Check to Time-Of-Use) là gì?
+TOCTOU là một dạng lỗi cạnh tranh đồng thời (Race Condition) kinh điển trong an ninh phần mềm và hệ thống cơ sở dữ liệu. Nó xảy ra khi có một khoảng trễ thời gian giữa:
+- **Thời điểm kiểm tra điều kiện (Time of Check)**: Mã nguồn kiểm tra xem tài nguyên có hợp lệ/tồn tại không.
+- **Thời điểm sử dụng/ghi dữ liệu (Time of Use)**: Mã nguồn thực hiện ghi dữ liệu dựa trên giả định rằng kết quả kiểm tra trước đó vẫn còn đúng.
+
+##### B. Phân tích 2 kịch bản trong `createProject`:
+Trong [`ProjectServiceImpl.java`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/main/java/vn/elca/training/service/impl/ProjectServiceImpl.java#L61-L85):
+```java
+// Bước 1: Time of Check
+if (projectRepository.existsByProjectNumber(request.getProjectNumber())) {
+    throw new ProjectNumberAlreadyExistsException(request.getProjectNumber());
+}
+
+// ... chuẩn bị dữ liệu ...
+
+// Bước 2: Time of Use
+Project saved = projectRepository.save(project);
+```
+
+###### Kịch bản 1: Luồng tuần tự bình thường (99.9% trường hợp)
+1. Người dùng A tạo dự án với `projectNumber = 1001` (số này đã có sẵn trong DB).
+2. Lệnh `projectRepository.existsByProjectNumber(1001)` truy vấn DB và trả về `true`.
+3. Khối lệnh `if` lập tức ném ra ngoại lệ nghiệp vụ:
+   ```java
+   throw new ProjectNumberAlreadyExistsException(1001);
+   ```
+4. **Luồng xử lý dừng lại ngay lập tức tại đây**. Mã nguồn hoàn toàn chưa bao giờ chạm tới câu lệnh `save()` hay câu SQL `INSERT`.
+5. Database không hề nhận lệnh ghi nào, nên **không bao giờ xảy ra lỗi vi phạm toàn vẹn dữ liệu**.
+6. Hệ thống trả về mã lỗi HTTP `400 Bad Request` với message rõ ràng: *"The project number already existed: 1001"*.
+
+###### Kịch bản 2: Luồng cạnh tranh đồng thời (Race Condition - Lọt qua cửa kiểm tra)
+Đây là kịch bản duy nhất khiến `DataIntegrityViolationException` phát sinh trên `PROJECT_NUMBER`:
+
+```
+   [Luồng A (Thread 1)]                                      [Luồng B (Thread 2)]
+            │                                                         │
+1. Gửi request tạo: 9999                                   1. Gửi request tạo: 9999
+            │                                                         │
+2. Hỏi DB: existsByProjectNumber(9999)?                    2. Hỏi DB: existsByProjectNumber(9999)?
+   ──► DB trả về FALSE (Chưa có!)                             ──► DB trả về FALSE (Chưa có!)
+            │                                                         │
+   VƯỢT QUA CỔNG CHECK! ✅                                     VƯỢT QUA CỔNG CHECK! ✅
+            │                                                         │
+3. Bắn SQL: INSERT INTO PROJECT(..., 9999)                            │
+   ──► Ghi thành công vào Database!                                   │
+            │                                                         │
+            │                                              3. Bắn SQL: INSERT INTO PROJECT(..., 9999)
+            │                                                 ──► 💥 DATABASE TỪ CHỐI!
+            │                                                     Vi phạm UNIQUE CONSTRAINT
+            │                                                     trên cột PROJECT_NUMBER!
+            ▼                                                         ▼
+       HTTP 201 Created                                    Ném DataIntegrityViolationException
+```
+
+Vì Luồng B kiểm tra DB tại thời điểm Luồng A **chưa kịp ghi xong**, cả hai luồng đều nhận kết quả kiểm tra là `false` (hợp lệ). Cổng kiểm tra `existsBy...` bị vô hiệu hóa hoàn toàn bởi khoảng trễ mili-giây.
+
+Khi Luồng B thực sự thực hiện lệnh `INSERT`, cơ chế bảo vệ cứng của Database mới kích hoạt:
+1. Engine cơ sở dữ liệu kiểm tra cây chỉ mục B-Tree của ràng buộc Unique trên cột `PROJECT_NUMBER`.
+2. Phát hiện khóa `9999` đã được Luồng A ghi trước đó.
+3. Database hủy câu lệnh và ném mã lỗi vi phạm toàn vẹn (H2/PostgreSQL mã `23505`, Oracle mã `ORA-00001`).
+4. JDBC Driver đẩy ngoại lệ lên Hibernate `ConstraintViolationException`.
+5. Spring Framework bọc thành:
+   ```java
+   org.springframework.dao.DataIntegrityViolationException
+   ```
+
+##### C. Tại sao `@Column(unique = true)` ở Entity không tự kiểm tra trước?
+- **Bản chất của JPA Annotation**: Thuộc tính `unique = true` của `@Column` chỉ đóng vai trò là **siêu dữ liệu phát sinh DDL (Data Definition Language)**. Nó hướng dẫn Hibernate sinh câu lệnh:
+  ```sql
+  ALTER TABLE PROJECT ADD CONSTRAINT UK_PROJECT_NUMBER UNIQUE (PROJECT_NUMBER);
+  ```
+- **Không có In-Memory Validation**: JPA/Hibernate hoàn toàn **không có cơ chế tự động truy vấn kiểm tra trùng lặp trong bộ nhớ Java trước khi ghi**. Việc phát hiện trùng lặp là trách nhiệm duy nhất của Database Engine khi nhận lệnh `INSERT`.
+
+##### D. Vai trò: Cổng Soát Vé Mềm vs Bức Tường Lửa Cứng
+| Thành phần | Cấp độ | Vai trò kiến trúc |
+| :--- | :---: | :--- |
+| **`existsByProjectNumber`** | **Tầng Ứng Dụng (Application Layer)** | **Cổng soát vé mềm (Fail-Fast)**: Ngăn chặn 99.9% trường hợp trùng lặp trong luồng thông thường để trả về thông báo lỗi thân thiện, tiết kiệm tài nguyên kết nối DB. Bị vô hiệu hóa khi có Race Condition. |
+| **`UNIQUE Constraint` dưới DB** | **Tầng Cơ Sở Dữ Liệu (Database Layer)** | **Bức tường lửa cứng (Single Source of Truth)**: Chốt chặn an ninh tối hậu không thể xuyên thủng. Đảm bảo 100% dữ liệu không bao giờ bị trùng lặp ngay cả khi có hàng trăm luồng đồng thời vượt qua cổng soát vé mềm. |
+
+##### E. Các nguồn gốc khác gây ra `DataIntegrityViolationException`
+Không chỉ có `projectNumber`, ngoại lệ `DataIntegrityViolationException` đại diện cho toàn bộ các vi phạm quy tắc toàn vẹn dữ liệu trong cơ sở dữ liệu quan hệ:
+1. **Vi phạm Khóa Ngoại (`FOREIGN KEY Constraint Violation`)**: Khi xóa một `Group` mà vẫn còn các `Project` đang tham chiếu tới `GROUP_ID` đó, hoặc chèn `Project` với `GROUP_ID` không tồn tại.
+2. **Vi phạm Ràng Buộc Khác Rỗng (`NOT NULL Constraint Violation`)**: Khi một trường được cấu hình `nullable = false` dưới DB nhưng câu lệnh SQL truyền giá trị `NULL`.
+3. **Cắt Cụt Dữ Liệu (`Data Truncation / Value Too Large`)**: Khi dữ liệu chuỗi gửi xuống vượt quá kích thước tối đa của cột DB (ví dụ cột `CUSTOMER VARCHAR(50)` nhưng truyền chuỗi 100 ký tự).
+
+---
+
+#### 1.4.3. So Sánh Bản Chất: `OptimisticLockingFailureException` vs `DataIntegrityViolationException`
+
+Rất nhiều kỹ sư thường nhầm lẫn giữa hai loại ngoại lệ này. Bảng dưới đây đối chiếu chi tiết:
+
+| Đặc tính so sánh | Khóa Lạc Quan (`OptimisticLockingFailureException`) | Vi Phạm Toàn Vẹn Dữ Liệu (`DataIntegrityViolationException`) |
+| :--- | :--- | :--- |
+| **Bản chất nghiệp vụ** | Tranh chấp phiên bản sửa đổi đồng thời trên **cùng một bản ghi đã tồn tại**. | Vi phạm tính duy nhất hoặc quy tắc quan hệ khi ghi dữ liệu (thường gặp khi **tạo mới đồng thời**). |
+| **Câu lệnh SQL phát sinh** | `UPDATE ... WHERE ID = ? AND VERSION = ?` | `INSERT INTO ...` hoặc `DELETE FROM ...` (dính khóa ngoại) |
+| **Thành phần phát hiện lỗi** | **Hibernate ORM**: Nhận kết quả từ JDBC Driver thấy `affected rows = 0`. | **Database Engine**: Phát hiện vi phạm Unique B-Tree Index hoặc Foreign Key Table. |
+| **Mã lỗi Database** | Không có mã lỗi DB (câu lệnh SQL chạy hoàn toàn hợp lệ nhưng tìm thấy 0 dòng). | Có mã lỗi DB rõ ràng (H2/Postgres: `23505`, Oracle: `ORA-00001`, MySQL: `1062`). |
+| **Vai trò của `@Version`** | Là thành phần cốt lõi để so khớp phiên bản. | Hoàn toàn không liên quan (không kiểm tra version trong `INSERT`). |
+| **Mã HTTP Status Code** | **`409 Conflict`** (Chuẩn RESTful cho xung đột phiên bản). | **`409 Conflict`** (nếu trùng Unique do race condition) hoặc **`400 Bad Request`**. |
+
+---
+
+#### 1.4.4. Thiết Kế Xử Lý Lỗi Tập Trung Chuẩn Mực Trong `GlobalExceptionHandler`
+
+Để tránh việc lỗi `DataIntegrityViolationException` trôi xuống hàm bắt ngoại lệ chung `Exception.class` và trả về mã `500 Internal Server Error`, [`GlobalExceptionHandler.java`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/main/java/vn/elca/training/controller/GlobalExceptionHandler.java) cần xử lý riêng biệt cả 2 trường hợp:
+
+```java
+// 1. Xử lý xung đột phiên bản khi Cập nhật (Khóa Lạc Quan)
+@ExceptionHandler({OptimisticLockException.class, ObjectOptimisticLockingFailureException.class})
+public ResponseEntity<ErrorResponse> handleOptimisticLock(Exception ex, Locale locale) {
+    log.warn("Optimistic lock conflict: {}", ex.getMessage());
+    String message = getLocalizedMessage("error.optimistic.lock", 
+            "The project has been modified by another user. Please refresh and try again.", locale);
+
+    ErrorResponse errorResponse = ErrorResponse.builder()
+            .status(HttpStatus.CONFLICT.value()) // HTTP 409
+            .errorCode("OPTIMISTIC_LOCK_ERROR")
+            .message(message)
+            .timestamp(LocalDateTime.now())
+            .build();
+
+    return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+}
+
+// 2. Xử lý vi phạm toàn vẹn dữ liệu khi Tạo mới đồng thời (Race Condition TOCTOU)
+@ExceptionHandler(DataIntegrityViolationException.class)
+public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex, Locale locale) {
+    log.warn("Data integrity violation (concurrent race condition): {}", ex.getMessage());
+
+    String message = getLocalizedMessage("error.project.number.exist", 
+            "The project number already existed", locale);
+
+    ErrorResponse errorResponse = ErrorResponse.builder()
+            .status(HttpStatus.CONFLICT.value()) // HTTP 409 Conflict chuẩn RESTful
+            .errorCode("PROJECT_NUMBER_ALREADY_EXISTS")
+            .message(message)
+            .timestamp(LocalDateTime.now())
+            .build();
+
+    return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+}
+```
+
+---
+
+#### 1.4.5. Phương Pháp Kiểm Thử Tái Hiện (Simulation / Reproduction Guide)
+Chi tiết các bước thực hành mô phỏng chính xác lỗi `DataIntegrityViolationException` bằng phương pháp **IntelliJ Debugger + H2 Web Console + Bruno API Client** được hướng dẫn đầy đủ tại:
+👉 [`HUONG_DAN_REPRODUCE_DATA_INTEGRITY_TOCTOU.md`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/HUONG_DAN_REPRODUCE_DATA_INTEGRITY_TOCTOU.md).
 
 ---
 

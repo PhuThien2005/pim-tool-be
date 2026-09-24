@@ -53,7 +53,7 @@ public class ProjectExecutionPlanTest {
     public void testExplainAnalyze_SearchProjectsByStatusAndCustomer() {
         String sql = "SELECT p.ID, p.PROJECT_NUMBER, p.NAME, p.STATUS, p.CUSTOMER " +
                 "FROM PROJECT p " +
-                "WHERE p.STATUS = 'NEW' AND p.CUSTOMER = 'Customer A'";
+                "WHERE p.STATUS = 'NEW' AND p.CUSTOMER = 'Canton de Vaud'";
         executeAndPrintExplain("Search Projects with Composite Index (idx_project_status_customer)", sql);
     }
 

@@ -60,7 +60,7 @@ public class SearchProjectCriteriaTest {
     @Test
     public void testToPredicate_MemberVisaFilter() {
         SearchProjectCriteria criteria = SearchProjectCriteria.builder()
-                .memberVisa("BHU")
+                .memberVisas(java.util.Collections.singleton("BHU"))
                 .build();
         Predicate predicate = criteria.toPredicate();
         Assert.assertNotNull(predicate);

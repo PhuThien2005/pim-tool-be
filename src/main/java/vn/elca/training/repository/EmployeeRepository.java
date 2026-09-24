@@ -11,7 +11,7 @@ import java.util.List;
 
 @Repository
 public interface EmployeeRepository extends JpaRepository<Employee, Long> {
-    Slice<Employee> findByVisaContainingIgnoreCaseOrFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(
+    Slice<Employee> findByVisaStartingWithIgnoreCaseOrFirstNameStartingWithIgnoreCaseOrLastNameStartingWithIgnoreCase(
             String visa, String firstName, String lastName, Pageable pageable);
 
     List<Employee> findByVisaIn(Collection<String> visas);

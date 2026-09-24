@@ -27,7 +27,7 @@ public class EmployeeServiceImpl implements EmployeeService {
             return new SliceImpl<>(Collections.emptyList(), pageable, false);
         }
         String trimmed = keyword.trim();
-        return employeeRepository.findByVisaContainingIgnoreCaseOrFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(
+        return employeeRepository.findByVisaStartingWithIgnoreCaseOrFirstNameStartingWithIgnoreCaseOrLastNameStartingWithIgnoreCase(
                         trimmed, trimmed, trimmed, pageable)
                 .map(e -> modelMapper.map(e, EmployeeListResponse.class));
     }

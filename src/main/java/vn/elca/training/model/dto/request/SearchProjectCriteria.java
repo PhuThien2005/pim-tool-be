@@ -13,6 +13,7 @@ import vn.elca.training.validator.annotation.ValidVisa;
 
 import javax.validation.constraints.Size;
 import java.time.LocalDate;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -41,8 +42,7 @@ public class SearchProjectCriteria {
     @ValidVisa(message = "{employee.visa.invalid}")
     private String leaderVisa;
 
-    @ValidVisa(message = "{employee.visa.invalid}")
-    private String memberVisa;
+    private Set<@ValidVisa(message = "{employee.visa.invalid}") String> memberVisas;
 
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate startDateFrom;
@@ -59,14 +59,23 @@ public class SearchProjectCriteria {
     public Predicate toPredicate() {
         QProject p = QProject.project;
         String kw = StringUtils.isNotBlank(keyword) ? keyword.trim() : null;
-        BooleanExpression keywordExp = (kw == null) ? null : p.name.containsIgnoreCase(kw)
-                .or(p.customer.containsIgnoreCase(kw))
+        BooleanExpression keywordExp = (kw == null) ? null : p.name.startsWithIgnoreCase(kw)
+                .or(p.customer.startsWithIgnoreCase(kw))
                 .or(StringUtils.isNumeric(kw) ? p.projectNumber.eq(Integer.parseInt(kw)) : null);
+        BooleanBuilder membersExp = new BooleanBuilder();
+        if (memberVisas != null && !memberVisas.isEmpty()) {
+            for (String visa : memberVisas) {
+                if (StringUtils.isNotBlank(visa)) {
+                    membersExp.and(p.employees.any().visa.equalsIgnoreCase(visa.trim()));
+                }
+            }
+        }
+
         return new BooleanBuilder()
                 .and(keywordExp)
                 .and(status != null ? p.status.eq(status) : null)
                 .and(StringUtils.isNotBlank(leaderVisa) ? p.group.groupLeader.visa.equalsIgnoreCase(leaderVisa.trim()) : null)
-                .and(StringUtils.isNotBlank(memberVisa) ? p.employees.any().visa.equalsIgnoreCase(memberVisa.trim()) : null)
+                .and(membersExp)
                 .and(startDateFrom != null ? p.startDate.goe(startDateFrom) : null)
                 .and(startDateTo != null ? p.startDate.loe(startDateTo) : null)
                 .and(endDateFrom != null ? p.endDate.goe(endDateFrom) : null)

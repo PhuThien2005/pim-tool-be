@@ -32,7 +32,7 @@ public class ProjectRepositoryTest {
         Page<Project> page = projectRepository.searchProjects(criteria, PageRequest.of(0, 10));
 
         Assert.assertNotNull(page);
-        Assert.assertEquals(6, page.getTotalElements());
+        Assert.assertEquals(25, page.getTotalElements());
         Assert.assertEquals(Integer.valueOf(1001), page.getContent().get(0).getProjectNumber());
     }
 
@@ -61,11 +61,11 @@ public class ProjectRepositoryTest {
     @Test
     public void testSearchProjects_ByKeyword_Customer() {
         SearchProjectCriteria criteria = SearchProjectCriteria.builder()
-                .keyword("Customer B")
+                .keyword("Swisscom")
                 .build();
         Page<Project> page = projectRepository.searchProjects(criteria, PageRequest.of(0, 10));
 
-        Assert.assertEquals(2, page.getTotalElements());
+        Assert.assertEquals(3, page.getTotalElements());
     }
 
     @Test
@@ -75,7 +75,7 @@ public class ProjectRepositoryTest {
                 .build();
         Page<Project> page = projectRepository.searchProjects(criteria, PageRequest.of(0, 10));
 
-        Assert.assertEquals(2, page.getTotalElements());
+        Assert.assertEquals(6, page.getTotalElements());
         Assert.assertTrue(page.getContent().stream().allMatch(p -> p.getStatus() == ProjectStatus.NEW));
     }
 
@@ -86,18 +86,18 @@ public class ProjectRepositoryTest {
                 .build();
         Page<Project> page = projectRepository.searchProjects(criteria, PageRequest.of(0, 10));
 
-        Assert.assertEquals(2, page.getTotalElements());
+        Assert.assertEquals(6, page.getTotalElements());
         Assert.assertTrue(page.getContent().stream().allMatch(p -> "DTH".equalsIgnoreCase(p.getGroup().getGroupLeader().getVisa())));
     }
 
     @Test
     public void testSearchProjects_ByMemberVisa() {
         SearchProjectCriteria criteria = SearchProjectCriteria.builder()
-                .memberVisa("HTV")
+                .memberVisas(java.util.Collections.singleton("HTV"))
                 .build();
         Page<Project> page = projectRepository.searchProjects(criteria, PageRequest.of(0, 10));
 
-        Assert.assertEquals(2, page.getTotalElements());
+        Assert.assertEquals(4, page.getTotalElements());
     }
 
     @Test
@@ -108,17 +108,17 @@ public class ProjectRepositoryTest {
                 .build();
         Page<Project> page = projectRepository.searchProjects(criteria, PageRequest.of(0, 10));
 
-        Assert.assertEquals(3, page.getTotalElements());
+        Assert.assertEquals(12, page.getTotalElements());
     }
 
     @Test
     public void testSearchProjects_Pagination() {
         SearchProjectCriteria criteria = new SearchProjectCriteria();
-        Page<Project> page = projectRepository.searchProjects(criteria, PageRequest.of(0, 2));
+        Page<Project> page = projectRepository.searchProjects(criteria, PageRequest.of(0, 5));
 
-        Assert.assertEquals(6, page.getTotalElements());
-        Assert.assertEquals(2, page.getContent().size());
-        Assert.assertEquals(3, page.getTotalPages());
+        Assert.assertEquals(25, page.getTotalElements());
+        Assert.assertEquals(5, page.getContent().size());
+        Assert.assertEquals(5, page.getTotalPages());
     }
 
     @Test
@@ -149,7 +149,7 @@ public class ProjectRepositoryTest {
         Page<Project> page = projectRepository.searchProjects(criteria, PageRequest.of(0, 10, sort));
 
         Assert.assertNotNull(page);
-        Assert.assertEquals(6, page.getTotalElements());
+        Assert.assertEquals(25, page.getTotalElements());
         Assert.assertFalse(page.getContent().isEmpty());
     }
 }

@@ -2,84 +2,1457 @@
   "info": {
     "_postman_id": "803eb3a6-f877-4bb7-bea3-10afeb876d4e",
     "name": "pilot-project-back",
-    "description": "Postman collection to test the pilot-project-back Spring Boot application.",
+    "description": "Comprehensive Postman & Bruno test collection for PIM Tool Backend (Spring Boot). Covers all endpoints, pagination, sorting, search filters, CRUD operations, validation rules, business logic errors, optimistic locking, and i18n.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "createdProjectId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "createdProjectVersion",
+      "value": "0",
+      "type": "string"
+    },
+    {
+      "key": "bulkId1",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "bulkId2",
+      "value": "5",
+      "type": "string"
+    }
+  ],
   "item": [
     {
-      "name": "1. GET /main",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "http://localhost:8080/main",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "8080",
-          "path": ["main"]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "2. GET /projects/search?keyword=EFV",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "http://localhost:8080/projects/search?keyword=EFV",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "8080",
-          "path": ["projects", "search"],
-          "query": [
+      "name": "1. Projects - Search & Filters",
+      "description": "Test suite for GET /projects covering basic filters, advanced filters, pagination, and sorting.",
+      "item": [
+        {
+          "name": "1.1 Search Projects - Default (Page 0, Size 10)",
+          "event": [
             {
-              "key": "keyword",
-              "value": "EFV"
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Response is valid Pageable structure\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('content');",
+                  "    pm.expect(json).to.have.property('totalElements');",
+                  "    pm.expect(json).to.have.property('totalPages');",
+                  "    pm.expect(Array.isArray(json.content)).to.be.true;",
+                  "    pm.expect(json.content.length).to.be.at.most(10);",
+                  "    pm.expect(json.totalElements).to.be.at.least(25);",
+                  "});",
+                  "pm.test(\"Project item contains required fields\", function () {",
+                  "    var json = pm.response.json();",
+                  "    if (json.content.length > 0) {",
+                  "        var p = json.content[0];",
+                  "        pm.expect(p).to.have.property('id');",
+                  "        pm.expect(p).to.have.property('projectNumber');",
+                  "        pm.expect(p).to.have.property('name');",
+                  "        pm.expect(p).to.have.property('status');",
+                  "        pm.expect(p).to.have.property('customer');",
+                  "        pm.expect(p).to.have.property('startDate');",
+                  "        pm.expect(p).to.have.property('group');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
             }
-          ]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "3. GET /projects/{id}",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "http://localhost:8080/projects/1",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "8080",
-          "path": ["projects", "1"]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "4. POST /projects/{id} (Update Project)",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"EFV Updated\",\n  \"customer\": \"ELCA Vietnam\",\n  \"finishingDate\": \"31/12/2026\"\n}"
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "en"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects?page=0&size=10&sort=projectNumber,asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                },
+                {
+                  "key": "sort",
+                  "value": "projectNumber,asc"
+                }
+              ]
+            }
+          },
+          "response": []
         },
-        "url": {
-          "raw": "http://localhost:8080/projects/1",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "8080",
-          "path": ["projects", "1"]
+        {
+          "name": "1.2 Search Projects - Keyword Filter (Swisscom)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"All returned projects match keyword 'Swisscom'\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.content.length).to.be.above(0);",
+                  "    json.content.forEach(function (p) {",
+                  "        var matches = (p.customer && p.customer.toLowerCase().includes('swisscom')) ||",
+                  "                      (p.name && p.name.toLowerCase().includes('swisscom')) ||",
+                  "                      (p.projectNumber && p.projectNumber.toString().includes('swisscom'));",
+                  "        pm.expect(matches).to.be.true;",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects?keyword=Swisscom",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"],
+              "query": [
+                {
+                  "key": "keyword",
+                  "value": "Swisscom"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.3 Search Projects - Status Filter (status=NEW)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"All returned projects have status NEW\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.content.length).to.be.above(0);",
+                  "    json.content.forEach(function (p) {",
+                  "        pm.expect(p.status).to.equal('NEW');",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects?status=NEW",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "NEW"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.4 Search Projects - Combined Filter (keyword=1003 & status=INP)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Finds exact project 1003 with status INP\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.content.length).to.equal(1);",
+                  "    pm.expect(json.content[0].projectNumber).to.equal(1003);",
+                  "    pm.expect(json.content[0].status).to.equal('INP');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects?keyword=1003&status=INP",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"],
+              "query": [
+                {
+                  "key": "keyword",
+                  "value": "1003"
+                },
+                {
+                  "key": "status",
+                  "value": "INP"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.5 Search Projects - Advanced: Leader VISA (leaderVisa=DTH)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"All returned projects have group leader DTH\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.content.length).to.be.above(0);",
+                  "    json.content.forEach(function (p) {",
+                  "        pm.expect(p.group.groupLeader.visa).to.equal('DTH');",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects?leaderVisa=DTH",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"],
+              "query": [
+                {
+                  "key": "leaderVisa",
+                  "value": "DTH"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.6 Search Projects - Advanced: Member VISA (memberVisas=HTV&memberVisas=NTV)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects?memberVisas=HTV&memberVisas=NTV",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"],
+              "query": [
+                {
+                  "key": "memberVisas",
+                  "value": "HTV"
+                },
+                {
+                  "key": "memberVisas",
+                  "value": "NTV"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.7 Search Projects - Advanced: Date Range (startDateFrom & startDateTo)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"All projects fall within date range 2025-01-01 to 2025-06-30\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.content.length).to.be.above(0);",
+                  "    json.content.forEach(function (p) {",
+                  "        pm.expect(p.startDate >= '2025-01-01').to.be.true;",
+                  "        pm.expect(p.startDate <= '2025-06-30').to.be.true;",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects?startDateFrom=2025-01-01&startDateTo=2025-06-30",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"],
+              "query": [
+                {
+                  "key": "startDateFrom",
+                  "value": "2025-01-01"
+                },
+                {
+                  "key": "startDateTo",
+                  "value": "2025-06-30"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.8 Search Projects - Sorting: Single Column (sort=name,asc)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Items are sorted ascending by name\", function () {",
+                  "    var json = pm.response.json();",
+                  "    var names = json.content.map(function(p) { return p.name.toUpperCase(); });",
+                  "    for (var i = 0; i < names.length - 1; i++) {",
+                  "        pm.expect(names[i] <= names[i + 1]).to.be.true;",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects?sort=name,asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"],
+              "query": [
+                {
+                  "key": "sort",
+                  "value": "name,asc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.9 Search Projects - Sorting: Multi-column (status,asc & startDate,desc)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Sort parameters reflected in response\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.pageable.sort.sorted).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects?sort=status,asc&sort=startDate,desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"],
+              "query": [
+                {
+                  "key": "sort",
+                  "value": "status,asc"
+                },
+                {
+                  "key": "sort",
+                  "value": "startDate,desc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.10 Get Project Details by ID (GET /projects/1)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Returns complete detail of Project 1\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.id).to.equal(1);",
+                  "    pm.expect(json.projectNumber).to.equal(1001);",
+                  "    pm.expect(json.name).to.equal('EFV TAX PORTAL');",
+                  "    pm.expect(json.customer).to.equal('Canton de Vaud');",
+                  "    pm.expect(json.status).to.equal('NEW');",
+                  "    pm.expect(json).to.have.property('group');",
+                  "    pm.expect(json).to.have.property('employees');",
+                  "    pm.expect(Array.isArray(json.employees)).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "1"]
+            }
+          },
+          "response": []
         }
-      },
-      "response": []
+      ]
+    },
+    {
+      "name": "2. Projects - CRUD Workflow",
+      "description": "Lifecycle tests: Create new project, retrieve it, update with optimistic locking, delete single, and bulk delete.",
+      "item": [
+        {
+          "name": "2.1 Create Project - Success",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"Created project attributes are accurate\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.projectNumber).to.equal(9101);",
+                  "    pm.expect(json.name).to.equal('E-GOVERNMENT TAX PLATFORM');",
+                  "    pm.expect(json.status).to.equal('NEW');",
+                  "    pm.expect(json.version).to.equal(0);",
+                  "    pm.collectionVariables.set('createdProjectId', json.id);",
+                  "    pm.collectionVariables.set('createdProjectVersion', json.version);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectNumber\": 9101,\n  \"name\": \"E-GOVERNMENT TAX PLATFORM\",\n  \"customer\": \"Canton de Genève\",\n  \"groupId\": 1,\n  \"status\": \"NEW\",\n  \"startDate\": \"2026-04-01\",\n  \"endDate\": \"2026-12-31\",\n  \"visas\": [\"DTH\", \"HTV\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.2 Get Created Project Details",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Matches created project details\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.projectNumber).to.equal(9101);",
+                  "    pm.expect(json.name).to.equal('E-GOVERNMENT TAX PLATFORM');",
+                  "    pm.expect(json.employees.length).to.equal(2);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{createdProjectId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{createdProjectId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.3 Update Project - Success",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('createdProjectId')) {",
+                  "    pm.collectionVariables.set('createdProjectId', '1');",
+                  "}",
+                  "if (pm.collectionVariables.get('createdProjectVersion') === undefined) {",
+                  "    pm.collectionVariables.set('createdProjectVersion', '0');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Updated project reflected in response with incremented version\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.name).to.equal('E-GOVERNMENT TAX PLATFORM (REVISED)');",
+                  "    pm.expect(json.version).to.be.above(0);",
+                  "    pm.collectionVariables.set('createdProjectVersion', json.version);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"version\": {{createdProjectVersion}},\n  \"projectNumber\": 9101,\n  \"name\": \"E-GOVERNMENT TAX PLATFORM (REVISED)\",\n  \"customer\": \"Canton de Genève\",\n  \"groupId\": 2,\n  \"status\": \"NEW\",\n  \"startDate\": \"2026-04-01\",\n  \"endDate\": \"2027-06-30\",\n  \"visas\": [\"BHU\", \"NQN\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{createdProjectId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{createdProjectId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.4 Delete Single Project - Success",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204 No Content\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{createdProjectId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{createdProjectId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.5 Create Project A for Bulk Delete",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('bulkId1', json.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectNumber\": 9102,\n  \"name\": \"BULK DELETE CANDIDATE A\",\n  \"customer\": \"Test Corp\",\n  \"groupId\": 1,\n  \"status\": \"NEW\",\n  \"startDate\": \"2026-05-01\",\n  \"visas\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.6 Create Project B for Bulk Delete",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('bulkId2', json.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectNumber\": 9103,\n  \"name\": \"BULK DELETE CANDIDATE B\",\n  \"customer\": \"Test Corp\",\n  \"groupId\": 1,\n  \"status\": \"NEW\",\n  \"startDate\": \"2026-05-01\",\n  \"visas\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.7 Bulk Delete Projects - Success",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('bulkId1')) {",
+                  "    pm.collectionVariables.set('bulkId1', '1');",
+                  "}",
+                  "if (!pm.collectionVariables.get('bulkId2')) {",
+                  "    pm.collectionVariables.set('bulkId2', '5');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204 No Content\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {{bulkId1}},\n  {{bulkId2}}\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Groups & Employees",
+      "description": "Endpoints supporting the UI dropdowns (Groups) and member auto-completion (Employees).",
+      "item": [
+        {
+          "name": "3.1 Get All Groups - Slice Pagination",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Returns Slice with groups and leader details\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('content');",
+                  "    pm.expect(json.content.length).to.be.at.least(5);",
+                  "    var g = json.content[0];",
+                  "    pm.expect(g).to.have.property('id');",
+                  "    pm.expect(g).to.have.property('groupLeader');",
+                  "    pm.expect(g.groupLeader).to.have.property('visa');",
+                  "    pm.expect(g.groupLeader).to.have.property('firstName');",
+                  "    pm.expect(g.groupLeader).to.have.property('lastName');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/groups?page=0&size=20&sort=id,asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["groups"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                },
+                {
+                  "key": "sort",
+                  "value": "id,asc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.2 Autocomplete Employee - Prefix 'D'",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Returns suggestions containing 'D'\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.content.length).to.be.above(0);",
+                  "    json.content.forEach(function (emp) {",
+                  "        var matches = emp.visa.toUpperCase().includes('D') ||",
+                  "                      emp.firstName.toUpperCase().includes('D') ||",
+                  "                      emp.lastName.toUpperCase().includes('D');",
+                  "        pm.expect(matches).to.be.true;",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees?keyword=D&page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["employees"],
+              "query": [
+                {
+                  "key": "keyword",
+                  "value": "D"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.3 Autocomplete Employee - Exact VISA 'HTV'",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Finds employee with VISA HTV\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.content.length).to.be.above(0);",
+                  "    pm.expect(json.content[0].visa).to.equal('HTV');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees?keyword=HTV",
+              "host": ["{{baseUrl}}"],
+              "path": ["employees"],
+              "query": [
+                {
+                  "key": "keyword",
+                  "value": "HTV"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.4 Autocomplete Employee - Empty Keyword (Empty result)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Returns empty content array when keyword is blank\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.content.length).to.equal(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees?keyword=",
+              "host": ["{{baseUrl}}"],
+              "path": ["employees"],
+              "query": [
+                {
+                  "key": "keyword",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Validation & Business Rule Errors",
+      "description": "Negative testing to verify robust error handling, standard error formats, and HTTP 4xx responses.",
+      "item": [
+        {
+          "name": "4.1 Validation Error - Missing Mandatory Fields (HTTP 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Response has VALIDATION_ERROR and field error map\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.status).to.equal(400);",
+                  "    pm.expect(json.errorCode).to.equal('VALIDATION_ERROR');",
+                  "    pm.expect(json).to.have.property('errors');",
+                  "    pm.expect(json.errors).to.have.property('name');",
+                  "    pm.expect(json.errors).to.have.property('customer');",
+                  "    pm.expect(json.errors).to.have.property('projectNumber');",
+                  "    pm.expect(json.errors).to.have.property('groupId');",
+                  "    pm.expect(json.errors).to.have.property('startDate');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.2 Validation Error - Invalid Date Range: startDate > endDate (HTTP 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Returns VALIDATION_ERROR for start/end date logic\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.status).to.equal(400);",
+                  "    pm.expect(json.errorCode).to.equal('VALIDATION_ERROR');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectNumber\": 9199,\n  \"name\": \"Invalid Dates Project\",\n  \"customer\": \"Test Client\",\n  \"groupId\": 1,\n  \"status\": \"NEW\",\n  \"startDate\": \"2026-12-31\",\n  \"endDate\": \"2026-01-01\",\n  \"visas\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.3 Business Error - Duplicate Project Number (HTTP 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Returns PROJECT_NUMBER_ALREADY_EXISTS\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.status).to.equal(400);",
+                  "    pm.expect(json.errorCode).to.equal('PROJECT_NUMBER_ALREADY_EXISTS');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectNumber\": 1001,\n  \"name\": \"Duplicate 1001 Project\",\n  \"customer\": \"Canton de Vaud\",\n  \"groupId\": 1,\n  \"status\": \"NEW\",\n  \"startDate\": \"2026-01-01\",\n  \"visas\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.4 Business Error - Visa Not Found (HTTP 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Returns VISA_NOT_FOUND\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.status).to.equal(400);",
+                  "    pm.expect(json.errorCode).to.equal('VISA_NOT_FOUND');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectNumber\": 9198,\n  \"name\": \"Unknown Visa Project\",\n  \"customer\": \"Test Client\",\n  \"groupId\": 1,\n  \"status\": \"NEW\",\n  \"startDate\": \"2026-01-01\",\n  \"visas\": [\"XYZ\", \"ZZZ\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.5 Business Error - Group Not Found (HTTP 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 404 Not Found\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test(\"Returns GROUP_NOT_FOUND\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.status).to.equal(404);",
+                  "    pm.expect(json.errorCode).to.equal('GROUP_NOT_FOUND');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectNumber\": 9197,\n  \"name\": \"Ghost Group Project\",\n  \"customer\": \"Test Client\",\n  \"groupId\": 99999,\n  \"status\": \"NEW\",\n  \"startDate\": \"2026-01-01\",\n  \"visas\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.6 Not Found Error - Project Not Found (HTTP 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 404 Not Found\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test(\"Returns PROJECT_NOT_FOUND\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.status).to.equal(404);",
+                  "    pm.expect(json.errorCode).to.equal('PROJECT_NOT_FOUND');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/99999",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "99999"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.7 Business Error - Delete Non-NEW Project (HTTP 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Returns INVALID_PROJECT_STATUS for INP project deletion\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.status).to.equal(400);",
+                  "    pm.expect(json.errorCode).to.equal('INVALID_PROJECT_STATUS');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/3",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "3"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.8 Business Error - Bulk Delete with Non-NEW Project (HTTP 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Returns INVALID_PROJECT_STATUS on mixed status bulk delete\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.status).to.equal(400);",
+                  "    pm.expect(json.errorCode).to.equal('INVALID_PROJECT_STATUS');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  1,\n  3\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Concurrency & Optimistic Locking",
+      "description": "Verifies concurrency conflict detection when updating a project with a stale version.",
+      "item": [
+        {
+          "name": "5.1 Optimistic Lock Conflict - Stale Version (HTTP 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 409 Conflict\", function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test(\"Returns OPTIMISTIC_LOCK_ERROR with meaningful message\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.status).to.equal(409);",
+                  "    pm.expect(json.errorCode).to.equal('OPTIMISTIC_LOCK_ERROR');",
+                  "    pm.expect(json.message).to.include('modified by another user');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"version\": 99999,\n  \"projectNumber\": 1001,\n  \"name\": \"Conflict Update Attempt\",\n  \"customer\": \"Canton de Vaud\",\n  \"groupId\": 1,\n  \"status\": \"NEW\",\n  \"startDate\": \"2025-01-10\",\n  \"endDate\": \"2025-12-31\",\n  \"visas\": [\"HTV\", \"NQN\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "1"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6. Internationalization (i18n)",
+      "description": "Verifies that error messages dynamically adapt to the requested Accept-Language header.",
+      "item": [
+        {
+          "name": "6.1 English Error Message (Accept-Language: en)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Error message is in English\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.message).to.include('The project number already existed');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "en"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectNumber\": 1001,\n  \"name\": \"Duplicate Project EN\",\n  \"customer\": \"Test Client\",\n  \"groupId\": 1,\n  \"status\": \"NEW\",\n  \"startDate\": \"2025-01-01\",\n  \"visas\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "6.2 French Error Message (Accept-Language: fr)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Error message is in French\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.message).to.include('Le numéro de projet existe déjà');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "fr"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectNumber\": 1001,\n  \"name\": \"Duplicate Project FR\",\n  \"customer\": \"Test Client\",\n  \"groupId\": 1,\n  \"status\": \"NEW\",\n  \"startDate\": \"2025-01-01\",\n  \"visas\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"]
+            }
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }
