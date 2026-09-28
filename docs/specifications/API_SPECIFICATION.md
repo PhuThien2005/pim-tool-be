@@ -378,7 +378,22 @@ Tài liệu này cung cấp đặc tả kỹ thuật chi tiết toàn bộ các 
 
 ---
 
-## 4. Định dạng Lỗi Chuẩn (Standard Error Response)
+### Nhóm 4: Kiểm tra Sống/Chết Dịch vụ (`/ping`)
+
+---
+
+#### 4.1 Health Check / Ping
+- **Endpoint:** `GET /ping`
+- **Mô tả:** Endpoint kiểm tra nhanh trạng thái hoạt động (Liveness / Heartbeat) của máy chủ Backend, thường dùng cho Render, Docker Healthcheck hoặc load balancer.
+- **Query Parameters:** Không có.
+- **Phản hồi thành công (HTTP 200 OK):**
+```text
+pong
+```
+
+---
+
+## 5. Định dạng Lỗi Chuẩn (Standard Error Response)
 
 Khi xảy ra lỗi (mã HTTP `4xx` hoặc `5xx`), toàn bộ API trả về cấu trúc đối tượng JSON đồng nhất như sau:
 
