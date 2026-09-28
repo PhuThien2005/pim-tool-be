@@ -1,5 +1,6 @@
 package vn.elca.training.validator.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanWrapperImpl;
 import vn.elca.training.validator.annotation.StartBeforeEndDate;
 
@@ -7,6 +8,7 @@ import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 import java.time.LocalDate;
 
+@Slf4j
 public class StartBeforeEndDateValidator implements ConstraintValidator<StartBeforeEndDate, Object> {
 
     private String startDateField;
@@ -52,6 +54,7 @@ public class StartBeforeEndDateValidator implements ConstraintValidator<StartBef
             }
             return true;
         } catch (Exception e) {
+            log.warn("Error while evaluating StartBeforeEndDate constraint: {}", e.getMessage());
             return true;
         }
     }

@@ -36,6 +36,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException ex, Locale locale) {
+        log.warn("Business error [{}]: {}", ex.getErrorCode(), ex.getMessage());
         CommonErrorCode code = ex.getErrorCode();
         String message = getLocalizedMessage(code.getMessageKey(), ex.getArgs(), code.name(), locale);
         return buildError(code.getHttpStatus(), code.name(), message, ex.getErrors());
@@ -43,6 +44,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException ex) {
+        log.warn("Validation constraint violation: {}", ex.getMessage());
         Map<String, String> errors = new LinkedHashMap<>();
         for (ConstraintViolation<?> violation : ex.getConstraintViolations()) {
             errors.put(violation.getPropertyPath().toString(), violation.getMessage());
@@ -52,12 +54,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler({OptimisticLockException.class, ObjectOptimisticLockingFailureException.class})
     public ResponseEntity<ErrorResponse> handleOptimisticLock(Exception ex, Locale locale) {
+        log.warn("Optimistic lock conflict: {}", ex.getMessage());
         String message = getLocalizedMessage(CommonErrorCode.OPTIMISTIC_LOCK_ERROR.getMessageKey(), null, "Data has been modified by another user.", locale);
         return buildError(HttpStatus.CONFLICT, CommonErrorCode.OPTIMISTIC_LOCK_ERROR.name(), message, null);
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex, Locale locale) {
+        log.warn("Data integrity violation: {}", ex.getMessage());
         Throwable rootCause = org.springframework.core.NestedExceptionUtils.getMostSpecificCause(ex);
         String msg = (rootCause != null && rootCause.getMessage() != null ? rootCause.getMessage() : "")
                 + " " + (ex.getMessage() != null ? ex.getMessage() : "");
@@ -129,6 +133,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         try {
             return messageSource.getMessage(key, args, defaultMessage, locale != null ? locale : LocaleContextHolder.getLocale());
         } catch (Exception e) {
+            log.debug("Message resolution fallback for key '{}': {}", key, e.getMessage());
             return defaultMessage;
         }
     }

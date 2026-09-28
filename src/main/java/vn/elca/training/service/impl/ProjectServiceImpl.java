@@ -30,6 +30,7 @@ import vn.elca.training.service.ProjectService;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -90,7 +91,7 @@ public class ProjectServiceImpl implements ProjectService {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ProjectNotFoundException(projectId));
 
-        if (!project.getVersion().equals(request.getVersion())) {
+        if (!Objects.equals(project.getVersion(), request.getVersion())) {
             throw new ObjectOptimisticLockingFailureException(Project.class, projectId);
         }
 
