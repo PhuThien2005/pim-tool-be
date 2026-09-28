@@ -91,4 +91,21 @@ public class StartBeforeEndDateValidatorTest {
         Assert.assertTrue(validator.isValid(new TestDateRange(null, LocalDate.of(2025, 1, 1)), context));
         Assert.assertTrue(validator.isValid(new TestDateRange(LocalDate.of(2025, 1, 1), null), context));
     }
+
+    @Test
+    public void testExceptionHandling_WhenPropertyNotFound_ReturnsTrue() {
+        initValidator(false);
+        // String has no 'startDate' or 'endDate' property, throwing exception which is caught and logged
+        Assert.assertTrue(validator.isValid("plain string target", context));
+    }
+
+    @Test
+    public void testNonLocalDateProperties_ReturnsTrue() {
+        initValidator(false);
+        class NonDateTarget {
+            public String getStartDate() { return "not-a-date"; }
+            public String getEndDate() { return "not-a-date-either"; }
+        }
+        Assert.assertTrue(validator.isValid(new NonDateTarget(), context));
+    }
 }

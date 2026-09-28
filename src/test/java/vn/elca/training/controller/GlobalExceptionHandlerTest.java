@@ -27,6 +27,7 @@ import javax.validation.ConstraintViolationException;
 import javax.validation.Path;
 import java.util.Collections;
 import java.util.Locale;
+import java.util.Map;
 
 @RunWith(MockitoJUnitRunner.class)
 public class GlobalExceptionHandlerTest {
@@ -165,5 +166,84 @@ public class GlobalExceptionHandlerTest {
         ErrorResponse errorResponse = (ErrorResponse) response.getBody();
         Assert.assertEquals("BAD_GATEWAY", errorResponse.getErrorCode());
         Assert.assertEquals("Internal error message", errorResponse.getMessage());
+    }
+
+    @Test
+    public void testHandleBindException() {
+        org.springframework.validation.BindException ex = new org.springframework.validation.BindException(new Object(), "target");
+        ex.addError(new FieldError("target", "status", "Status cannot be null"));
+
+        ResponseEntity<Object> response = exceptionHandler.handleBindException(ex, new HttpHeaders(), HttpStatus.BAD_REQUEST, webRequest);
+
+        Assert.assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        Assert.assertTrue(response.getBody() instanceof ErrorResponse);
+        ErrorResponse errorResponse = (ErrorResponse) response.getBody();
+        Assert.assertEquals("VALIDATION_ERROR", errorResponse.getErrorCode());
+        Assert.assertEquals("Status cannot be null", errorResponse.getErrors().get("status"));
+    }
+
+    @Test
+    public void testHandleOptimisticLock_ObjectOptimisticLockingFailureException() {
+        ObjectOptimisticLockingFailureException ex = new ObjectOptimisticLockingFailureException("Project", 100L);
+        Mockito.when(messageSource.getMessage(Mockito.anyString(), Mockito.any(), Mockito.anyString(), Mockito.any(Locale.class)))
+                .thenReturn("Data has been modified by another user.");
+
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleOptimisticLock(ex, Locale.ENGLISH);
+
+        Assert.assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        Assert.assertNotNull(response.getBody());
+        Assert.assertEquals("OPTIMISTIC_LOCK_ERROR", response.getBody().getErrorCode());
+    }
+
+    @Test
+    public void testHandleDataIntegrityViolation_WithConstraintName() {
+        DataIntegrityViolationException ex = new DataIntegrityViolationException("Constraint UK_LU0HN5S04GTK9WKXS6729W9O9 violated");
+        Mockito.when(messageSource.getMessage(Mockito.anyString(), Mockito.any(), Mockito.anyString(), Mockito.any(Locale.class)))
+                .thenReturn("Project number already exists.");
+
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleDataIntegrityViolation(ex, Locale.ENGLISH);
+
+        Assert.assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        Assert.assertNotNull(response.getBody());
+        Assert.assertEquals("PROJECT_NUMBER_ALREADY_EXISTS", response.getBody().getErrorCode());
+    }
+
+    @Test
+    public void testHandleDataIntegrityViolation_NullRootCauseAndMessage() {
+        DataIntegrityViolationException ex = new DataIntegrityViolationException(null, null);
+
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleDataIntegrityViolation(ex, Locale.ENGLISH);
+
+        Assert.assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        Assert.assertNotNull(response.getBody());
+        Assert.assertEquals("DATA_INTEGRITY_VIOLATION", response.getBody().getErrorCode());
+    }
+
+    @Test
+    public void testHandleBusinessException_WithErrorsAndNullLocale() {
+        Map<String, String> errors = Collections.singletonMap("invalidIds", "1, 2");
+        BusinessException ex = new BusinessException(CommonErrorCode.INVALID_PROJECT_STATUS, "Status invalid", null, errors);
+        Mockito.when(messageSource.getMessage(Mockito.anyString(), Mockito.any(), Mockito.anyString(), Mockito.any(Locale.class)))
+                .thenReturn("Status invalid");
+
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleBusinessException(ex, null);
+
+        Assert.assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        Assert.assertNotNull(response.getBody());
+        Assert.assertEquals("INVALID_PROJECT_STATUS", response.getBody().getErrorCode());
+        Assert.assertEquals("1, 2", response.getBody().getErrors().get("invalidIds"));
+    }
+
+    @Test
+    public void testMessageResolution_FallbackOnException() {
+        BusinessException ex = new BusinessException(CommonErrorCode.INTERNAL_SERVER_ERROR);
+        Mockito.when(messageSource.getMessage(Mockito.anyString(), Mockito.any(), Mockito.anyString(), Mockito.any(Locale.class)))
+                .thenThrow(new org.springframework.context.NoSuchMessageException("error.unexpected"));
+
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleBusinessException(ex, Locale.ENGLISH);
+
+        Assert.assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        Assert.assertNotNull(response.getBody());
+        Assert.assertEquals("INTERNAL_SERVER_ERROR", response.getBody().getMessage());
     }
 }

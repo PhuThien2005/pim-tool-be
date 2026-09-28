@@ -431,4 +431,121 @@ public class ProjectServiceTest {
 
         projectService.deleteProject(1L);
     }
+
+
+    @Test
+    public void testDeleteProjects_NullOrEmpty_ReturnsEarly() {
+        projectService.deleteProjects(null);
+        projectService.deleteProjects(Collections.emptyList());
+
+        Mockito.verify(projectRepository, Mockito.never()).findAllById(Mockito.anyList());
+        Mockito.verify(projectRepository, Mockito.never()).deleteAll(Mockito.anyList());
+    }
+
+    @Test
+    public void testDeleteProjects_Success_DeletesAll() {
+        Project p1 = Project.builder().projectNumber(1001).status(ProjectStatus.NEW).build();
+        p1.setId(1L);
+        Project p2 = Project.builder().projectNumber(1002).status(ProjectStatus.NEW).build();
+        p2.setId(2L);
+
+        List<Long> ids = Arrays.asList(1L, 2L, 1L); // contains duplicate
+        Mockito.when(projectRepository.findAllById(Arrays.asList(1L, 2L))).thenReturn(Arrays.asList(p1, p2));
+
+        projectService.deleteProjects(ids);
+
+        Mockito.verify(projectRepository, Mockito.times(1)).deleteAll(Arrays.asList(p1, p2));
+    }
+
+    @Test
+    public void testCreateProject_NullOptionalFields_DefaultsApplied() {
+        CreateProjectRequest request = CreateProjectRequest.builder()
+                .projectNumber(3001)
+                .name(null)
+                .customer(null)
+                .status(null)
+                .groupId(1L)
+                .startDate(LocalDate.of(2025, 1, 1))
+                .visas(null)
+                .build();
+
+        Group group = new Group();
+        group.setId(1L);
+
+        ProjectDetailResponse detail = ProjectDetailResponse.builder()
+                .id(50L)
+                .projectNumber(3001)
+                .status(ProjectStatus.NEW)
+                .build();
+
+        Mockito.when(projectRepository.existsByProjectNumber(3001)).thenReturn(false);
+        Mockito.when(groupRepository.findById(1L)).thenReturn(java.util.Optional.of(group));
+        Mockito.when(projectRepository.save(Mockito.any(Project.class))).thenAnswer(i -> i.getArgument(0));
+        Mockito.when(modelMapper.map(Mockito.any(Project.class), Mockito.eq(ProjectDetailResponse.class))).thenReturn(detail);
+
+        ProjectDetailResponse result = projectService.createProject(request);
+
+        Assert.assertNotNull(result);
+        Assert.assertEquals(Integer.valueOf(3001), result.getProjectNumber());
+    }
+
+    @Test
+    public void testCreateProject_VisasAllBlank_ResolvesToEmptySet() {
+        CreateProjectRequest request = CreateProjectRequest.builder()
+                .projectNumber(3002)
+                .groupId(1L)
+                .startDate(LocalDate.of(2025, 1, 1))
+                .visas(new HashSet<>(Arrays.asList("   ", null, "")))
+                .build();
+
+        Group group = new Group();
+        group.setId(1L);
+
+        ProjectDetailResponse detail = ProjectDetailResponse.builder()
+                .id(51L)
+                .projectNumber(3002)
+                .build();
+
+        Mockito.when(projectRepository.existsByProjectNumber(3002)).thenReturn(false);
+        Mockito.when(groupRepository.findById(1L)).thenReturn(java.util.Optional.of(group));
+        Mockito.when(projectRepository.save(Mockito.any(Project.class))).thenAnswer(i -> i.getArgument(0));
+        Mockito.when(modelMapper.map(Mockito.any(Project.class), Mockito.eq(ProjectDetailResponse.class))).thenReturn(detail);
+
+        ProjectDetailResponse result = projectService.createProject(request);
+
+        Assert.assertNotNull(result);
+        Mockito.verify(employeeRepository, Mockito.never()).findByVisaIn(Mockito.anySet());
+    }
+
+    @Test
+    public void testUpdateProject_Success_NullFieldsHandled() {
+        project.setVersion(1L);
+        UpdateProjectRequest request = UpdateProjectRequest.builder()
+                .version(1L)
+                .name(null)
+                .customer(null)
+                .status(ProjectStatus.INP)
+                .groupId(2L)
+                .startDate(LocalDate.of(2025, 1, 1))
+                .visas(Collections.emptySet())
+                .build();
+
+        Group newGroup = new Group();
+        newGroup.setId(2L);
+
+        ProjectDetailResponse detail = ProjectDetailResponse.builder()
+                .id(1L)
+                .status(ProjectStatus.INP)
+                .build();
+
+        Mockito.when(projectRepository.findById(1L)).thenReturn(java.util.Optional.of(project));
+        Mockito.when(groupRepository.findById(2L)).thenReturn(java.util.Optional.of(newGroup));
+        Mockito.when(projectRepository.saveAndFlush(Mockito.any(Project.class))).thenAnswer(i -> i.getArgument(0));
+        Mockito.when(modelMapper.map(Mockito.any(Project.class), Mockito.eq(ProjectDetailResponse.class))).thenReturn(detail);
+
+        ProjectDetailResponse result = projectService.updateProject(1L, request);
+
+        Assert.assertNotNull(result);
+        Assert.assertEquals(ProjectStatus.INP, result.getStatus());
+    }
 }

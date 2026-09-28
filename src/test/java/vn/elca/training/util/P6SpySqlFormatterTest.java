@@ -25,4 +25,10 @@ public class P6SpySqlFormatterTest {
 
         Assert.assertEquals("\n[SQL EXECUTE] (took 2ms): update PROJECT set NAME = 'Test' where ID = 1;", formatted);
     }
+
+    @Test
+    public void testFormatMessage_NullOrEmptySql_ReturnsEmptyString() {
+        Assert.assertEquals("", formatter.formatMessage(1, "now", 0L, "statement", "", null, ""));
+        Assert.assertEquals("", formatter.formatMessage(1, "now", 0L, "statement", "", "   ", ""));
+    }
 }

@@ -362,5 +362,139 @@ public class ModelAndExceptionTest {
         Assert.assertTrue(grp1.getProjects().contains(p1));
         grp1.removeGroupLeader();
         Assert.assertNull(grp1.getGroupLeader());
+        grp1.removeGroupLeader(); // no-op branch when leader already null
+    }
+
+    @Test
+    public void testEntityNullBranchesAndEdgeCases() {
+        // Employee null branches
+        Employee empNull = new Employee();
+        Assert.assertEquals(Employee.class.hashCode(), empNull.hashCode());
+        Employee empNullVisa = new Employee();
+        Assert.assertNotEquals(empNull, empNullVisa); // visa == null
+        Assert.assertNotEquals(empNull, null);
+        Assert.assertNotEquals(empNull, new Object());
+
+        empNull.setProjects(null);
+        empNull.addProject(null);
+        empNull.removeProject(null);
+        Assert.assertTrue(empNull.getProjects().isEmpty());
+
+        // Group null branches
+        Group grpNull = new Group();
+        Assert.assertEquals(Group.class.hashCode(), grpNull.hashCode());
+        Group grpNullId = new Group();
+        Assert.assertNotEquals(grpNull, grpNullId);
+        Assert.assertNotEquals(grpNull, null);
+        Assert.assertNotEquals(grpNull, new Object());
+
+        grpNull.setProjects(null);
+        grpNull.addProject(null);
+        grpNull.removeProject(null);
+        Assert.assertTrue(grpNull.getProjects().isEmpty());
+
+        // Project null branches
+        Project prjNull = new Project();
+        Assert.assertEquals(Project.class.hashCode(), prjNull.hashCode());
+        Project prjNull2 = new Project();
+        Assert.assertNotEquals(prjNull, prjNull2);
+        Assert.assertNotEquals(prjNull, null);
+        Assert.assertNotEquals(prjNull, new Object());
+
+        prjNull.setGroup(null);
+        prjNull.removeGroup();
+        Assert.assertNull(prjNull.getGroup());
+
+        prjNull.setEmployees(null);
+        prjNull.addEmployee(null);
+        prjNull.removeEmployee(null);
+        Assert.assertTrue(prjNull.getEmployees().isEmpty());
+
+        // Project with projectNumber equals
+        Project prjA = Project.builder().projectNumber(1111).build();
+        Project prjB = Project.builder().projectNumber(2222).build();
+        Assert.assertNotEquals(prjA, prjB);
+
+        // Project without projectNumber but with ID
+        Project prjId1 = new Project();
+        prjId1.setId(10L);
+        Project prjId2 = new Project();
+        prjId2.setId(10L);
+        Assert.assertEquals(prjId1, prjId2);
+        Assert.assertEquals(prjId1.hashCode(), prjId2.hashCode());
+    }
+
+    @Test
+    public void testAllExceptionConstructors_Exhaustive() {
+        GroupNotFoundException g1 = new GroupNotFoundException("msg");
+        Assert.assertEquals("msg", g1.getMessage());
+        Assert.assertNull(g1.getGroupId());
+
+        GroupNotFoundException g2 = new GroupNotFoundException(5L, "msg with id");
+        Assert.assertEquals(Long.valueOf(5L), g2.getGroupId());
+        Assert.assertEquals("msg with id", g2.getMessage());
+
+        ProjectNotFoundException p1 = new ProjectNotFoundException("msg");
+        Assert.assertEquals("msg", p1.getMessage());
+        Assert.assertNull(p1.getProjectId());
+
+        ProjectNotFoundException p2 = new ProjectNotFoundException(10L, "msg with id");
+        Assert.assertEquals(Long.valueOf(10L), p2.getProjectId());
+        Assert.assertEquals("msg with id", p2.getMessage());
+
+        ProjectNotFoundException p3 = new ProjectNotFoundException(Collections.emptyList());
+        Assert.assertNull(p3.getProjectId());
+
+        ProjectNumberAlreadyExistsException pna1 = new ProjectNumberAlreadyExistsException("msg");
+        Assert.assertEquals("msg", pna1.getMessage());
+        Assert.assertNull(pna1.getProjectNumber());
+
+        ProjectNumberAlreadyExistsException pna2 = new ProjectNumberAlreadyExistsException(1234, "msg with num");
+        Assert.assertEquals(Integer.valueOf(1234), pna2.getProjectNumber());
+        Assert.assertEquals("msg with num", pna2.getMessage());
+
+        VisaNotFoundException v1 = new VisaNotFoundException("msg");
+        Assert.assertEquals("msg", v1.getMessage());
+        Assert.assertTrue(v1.getNotFoundVisas().isEmpty());
+
+        VisaNotFoundException v2 = new VisaNotFoundException("msg", Arrays.asList("V1", "V2"));
+        Assert.assertEquals(2, v2.getNotFoundVisas().size());
+
+        VisaNotFoundException v3 = new VisaNotFoundException((List<String>) null);
+        Assert.assertTrue(v3.getNotFoundVisas().isEmpty());
+
+        InvalidProjectStatusException i1 = new InvalidProjectStatusException("msg");
+        Assert.assertEquals("msg", i1.getMessage());
+        Assert.assertNull(i1.getInvalidProjectIds());
+
+        InvalidProjectStatusException i2 = new InvalidProjectStatusException("msg", Arrays.asList(1L, 2L));
+        Assert.assertEquals(2, i2.getInvalidProjectIds().size());
+    }
+
+    @Test
+    public void testDTO_ToStringAndBuilders() {
+        CreateProjectRequest cpr = CreateProjectRequest.builder().projectNumber(100).build();
+        Assert.assertNotNull(cpr.toString());
+
+        UpdateProjectRequest upr = UpdateProjectRequest.builder().projectNumber(200).build();
+        Assert.assertNotNull(upr.toString());
+
+        SearchProjectCriteria spc = SearchProjectCriteria.builder().keyword("kw").build();
+        Assert.assertNotNull(spc.toString());
+
+        EmployeeListResponse elr = EmployeeListResponse.builder().visa("ABC").build();
+        Assert.assertNotNull(elr.toString());
+
+        GroupListResponse glr = GroupListResponse.builder().id(1L).build();
+        Assert.assertNotNull(glr.toString());
+
+        ProjectListResponse plr = ProjectListResponse.builder().id(2L).build();
+        Assert.assertNotNull(plr.toString());
+
+        ProjectDetailResponse pdr = ProjectDetailResponse.builder().id(3L).build();
+        Assert.assertNotNull(pdr.toString());
+
+        ErrorResponse er = ErrorResponse.builder().status(400).build();
+        Assert.assertNotNull(er.toString());
     }
 }
