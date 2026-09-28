@@ -16,7 +16,6 @@ import java.util.Set;
 @Builder
 @Table(name = "\"GROUP\"")
 public class Group extends AbstractBaseEntity {
-    @Setter(AccessLevel.NONE)
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "GROUP_LEADER_ID", nullable = false, unique = true)
     private Employee groupLeader;
@@ -26,20 +25,6 @@ public class Group extends AbstractBaseEntity {
     @Setter(AccessLevel.NONE)
     @OneToMany(mappedBy = "group", fetch = FetchType.LAZY)
     private Set<Project> projects = new HashSet<>();
-
-    public void setGroupLeader(Employee groupLeader) {
-        if (this.groupLeader == groupLeader) {
-            return;
-        }
-        Employee oldGroupLeader = this.groupLeader;
-        this.groupLeader = groupLeader;
-        if (oldGroupLeader != null && oldGroupLeader.getGroup() == this) {
-            oldGroupLeader.setGroup(null);
-        }
-        if (groupLeader != null && groupLeader.getGroup() != this) {
-            groupLeader.setGroup(this);
-        }
-    }
 
     public void removeGroupLeader() {
         this.setGroupLeader(null);

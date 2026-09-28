@@ -17,6 +17,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import vn.elca.training.model.dto.response.ProjectListResponse;
+import vn.elca.training.model.entity.Project;
 
 /**
  * @author gtn
@@ -45,7 +47,25 @@ public class ApplicationWebConfig extends SpringBootServletInitializer {
     public ModelMapper modelMapper() {
         ModelMapper modelMapper = new ModelMapper();
         modelMapper.getConfiguration()
-                .setMatchingStrategy(MatchingStrategies.STRICT);
+                .setMatchingStrategy(MatchingStrategies.STRICT)
+                .setPreferNestedProperties(false);
+
+        modelMapper.createTypeMap(vn.elca.training.model.entity.Project.class, vn.elca.training.model.dto.response.ProjectListResponse.class)
+                .setConverter(context -> {
+                    vn.elca.training.model.entity.Project p = context.getSource();
+                    if (p == null) {
+                        return null;
+                    }
+                    return vn.elca.training.model.dto.response.ProjectListResponse.builder()
+                            .id(p.getId())
+                            .projectNumber(p.getProjectNumber())
+                            .name(p.getName())
+                            .status(p.getStatus())
+                            .customer(p.getCustomer())
+                            .startDate(p.getStartDate())
+                            .build();
+                });
+
         return modelMapper;
     }
 

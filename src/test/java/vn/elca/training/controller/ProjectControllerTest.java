@@ -14,7 +14,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
+import vn.elca.training.model.dto.request.CreateProjectRequest;
 import vn.elca.training.model.dto.request.SearchProjectCriteria;
+import vn.elca.training.model.dto.request.UpdateProjectRequest;
 import vn.elca.training.model.dto.response.ProjectDetailResponse;
 import vn.elca.training.model.dto.response.ProjectListResponse;
 import vn.elca.training.model.entity.ProjectStatus;
@@ -27,6 +29,8 @@ import java.util.Collections;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @RunWith(SpringRunner.class)
@@ -86,6 +90,7 @@ public class ProjectControllerTest {
                 .andExpect(jsonPath("$.errors.leaderVisa").exists());
     }
 
+
     @Test
     public void testSearchProjects_InvalidStartDateRange_Returns400() throws Exception {
         mockMvc.perform(get("/projects")
@@ -93,7 +98,8 @@ public class ProjectControllerTest {
                         .param("startDateTo", "2025-01-01")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"));
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.errors.startDateTo").value("Start date 'To' must be on or after 'From'"));
     }
 
     @Test
@@ -103,7 +109,20 @@ public class ProjectControllerTest {
                         .param("endDateTo", "2025-01-01")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"));
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.errors.endDateTo").value("End date 'To' must be on or after 'From'"));
+    }
+
+    @Test
+    public void testSearchProjects_InvalidEndDateRange_FrenchLocale() throws Exception {
+        mockMvc.perform(get("/projects")
+                        .param("endDateFrom", "2025-12-31")
+                        .param("endDateTo", "2025-01-01")
+                        .header("Accept-Language", "fr")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.errors.endDateTo").value("La date de fin 'À' doit être postérieure ou égale à la date 'De'"));
     }
 
     @Test
@@ -147,6 +166,32 @@ public class ProjectControllerTest {
     }
 
     @Test
+    public void testDeleteProjects_NotFound_Returns404_WithNotFoundIds() throws Exception {
+        Mockito.doThrow(new ProjectNotFoundException(java.util.Arrays.asList(998L, 999L)))
+                .when(projectService).deleteProjects(java.util.Arrays.asList(998L, 999L));
+
+        mockMvc.perform(delete("/projects")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("[998, 999]"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("PROJECT_NOT_FOUND"))
+                .andExpect(jsonPath("$.errors.notFoundProjectIds").value("998, 999"));
+    }
+
+    @Test
+    public void testDeleteProjects_InvalidStatus_Returns400_WithInvalidIds() throws Exception {
+        Mockito.doThrow(new InvalidProjectStatusException("Only projects with status NEW can be deleted", java.util.Arrays.asList(3L, 4L)))
+                .when(projectService).deleteProjects(java.util.Arrays.asList(3L, 4L));
+
+        mockMvc.perform(delete("/projects")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("[3, 4]"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_PROJECT_STATUS"))
+                .andExpect(jsonPath("$.errors.invalidProjectIds").value("3, 4"));
+    }
+
+    @Test
     public void testDeleteProject_NotFound_Returns404() throws Exception {
         Mockito.doThrow(new ProjectNotFoundException(999L))
                 .when(projectService).deleteProject(999L);
@@ -185,6 +230,85 @@ public class ProjectControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.projectNumber").value(1001))
                 .andExpect(jsonPath("$.name").value("EFV"));
+    }
+
+    @Test
+    public void testGetProject_NotFound_Returns404() throws Exception {
+        Mockito.when(projectService.getProject(999L)).thenThrow(new ProjectNotFoundException(999L));
+
+        mockMvc.perform(get("/projects/999")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("PROJECT_NOT_FOUND"));
+    }
+
+    @Test
+    public void testCreateProject_Success_Returns201() throws Exception {
+        ProjectDetailResponse detail = ProjectDetailResponse.builder()
+                .id(10L)
+                .projectNumber(2001)
+                .name("New Project")
+                .customer("New Customer")
+                .status(ProjectStatus.NEW)
+                .startDate(LocalDate.of(2025, 1, 1))
+                .build();
+
+        Mockito.when(projectService.createProject(Mockito.any(CreateProjectRequest.class))).thenReturn(detail);
+
+        String json = "{\"projectNumber\":2001,\"name\":\"New Project\",\"customer\":\"New Customer\",\"groupId\":1,\"status\":\"NEW\",\"startDate\":\"2025-01-01\"}";
+
+        mockMvc.perform(post("/projects")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.projectNumber").value(2001))
+                .andExpect(jsonPath("$.name").value("New Project"));
+    }
+
+    @Test
+    public void testCreateProject_ValidationError_Returns400() throws Exception {
+        // Missing required fields
+        String invalidJson = "{\"name\":\"\"}";
+
+        mockMvc.perform(post("/projects")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    public void testUpdateProject_Success_Returns200() throws Exception {
+        ProjectDetailResponse detail = ProjectDetailResponse.builder()
+                .id(1L)
+                .projectNumber(1001)
+                .name("Updated Project")
+                .customer("Updated Customer")
+                .status(ProjectStatus.INP)
+                .startDate(LocalDate.of(2025, 1, 1))
+                .build();
+
+        Mockito.when(projectService.updateProject(Mockito.eq(1L), Mockito.any(UpdateProjectRequest.class))).thenReturn(detail);
+
+        String json = "{\"version\":1,\"name\":\"Updated Project\",\"customer\":\"Updated Customer\",\"groupId\":1,\"status\":\"INP\",\"startDate\":\"2025-01-01\"}";
+
+        mockMvc.perform(put("/projects/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Updated Project"));
+    }
+
+    @Test
+    public void testUpdateProject_ValidationError_Returns400() throws Exception {
+        // Invalid json (missing version and groupId)
+        String invalidJson = "{\"name\":\"\"}";
+
+        mockMvc.perform(put("/projects/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"));
     }
 }
 

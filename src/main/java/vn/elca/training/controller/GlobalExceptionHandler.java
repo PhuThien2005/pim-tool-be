@@ -38,7 +38,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException ex, Locale locale) {
         CommonErrorCode code = ex.getErrorCode();
         String message = getLocalizedMessage(code.getMessageKey(), ex.getArgs(), code.name(), locale);
-        return buildError(code.getHttpStatus(), code.name(), message, null);
+        return buildError(code.getHttpStatus(), code.name(), message, ex.getErrors());
     }
 
     @ExceptionHandler(ConstraintViolationException.class)

@@ -18,6 +18,7 @@ public class P6SpySqlFormatter implements MessageFormattingStrategy {
         String upper = cleanSql.toUpperCase();
         if (upper.startsWith("SELECT")) {
             String formattedSql = formatter.format(cleanSql);
+            formattedSql = formattedSql.replaceAll("(?i)\\s*\\bcross\\s*\\r?\\n\\s*join\\b", "\n    cross join");
             return String.format(
                     "==> (Took %dms):\n" +
                     "EXPLAIN ANALYZE%s;\n" +

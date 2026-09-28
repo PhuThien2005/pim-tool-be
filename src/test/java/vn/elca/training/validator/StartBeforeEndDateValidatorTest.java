@@ -17,10 +17,16 @@ public class StartBeforeEndDateValidatorTest {
 
     @Getter
     @Setter
-    @AllArgsConstructor
     public static class TestDateRange {
         private LocalDate startDate;
         private LocalDate endDate;
+
+        public TestDateRange() {}
+
+        public TestDateRange(LocalDate startDate, LocalDate endDate) {
+            this.startDate = startDate;
+            this.endDate = endDate;
+        }
     }
 
     private StartBeforeEndDateValidator validator;

@@ -25,14 +25,9 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
     @Override
     public Page<Project> searchProjects(SearchProjectCriteria criteria, Pageable pageable) {
         QProject p = QProject.project;
-        QGroup g = QGroup.group;
-        QEmployee gl = new QEmployee("groupLeader");
         JPAQuery<Project> dataQuery = new JPAQuery<Project>(em)
                 .from(p)
-                .innerJoin(p.group, g).fetchJoin()
-                .innerJoin(g.groupLeader, gl).fetchJoin()
-                .where(criteria != null ? criteria.toPredicate() : null)
-                .distinct();
+                .where(criteria != null ? criteria.toPredicate() : null);
         Sort sort = (pageable != null) ? pageable.getSort() : Sort.unsorted();
         if (sort.getOrderFor("projectNumber") == null) {
             sort = sort.and(Sort.by(Sort.Direction.ASC, "projectNumber"));

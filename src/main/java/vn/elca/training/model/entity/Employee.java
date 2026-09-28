@@ -4,8 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 import org.hibernate.annotations.BatchSize;
-import org.hibernate.annotations.LazyToOne;
-import org.hibernate.annotations.LazyToOneOption;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -46,11 +44,6 @@ public class Employee extends AbstractBaseEntity {
     @ManyToMany(mappedBy = "employees", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private Set<Project> projects = new HashSet<>();
 
-    @Setter(AccessLevel.NONE)
-    @OneToOne(mappedBy = "groupLeader", fetch = FetchType.LAZY)
-    @LazyToOne(LazyToOneOption.NO_PROXY)
-    private Group group;
-
     public void addProject(Project project) {
         if (project != null) {
             if (this.projects == null) {
@@ -83,23 +76,5 @@ public class Employee extends AbstractBaseEntity {
                 this.addProject(prj);
             }
         }
-    }
-
-    public void setGroup(Group group) {
-        if (this.group == group) {
-            return;
-        }
-        Group oldGroup = this.group;
-        this.group = group;
-        if (oldGroup != null && oldGroup.getGroupLeader() == this) {
-            oldGroup.setGroupLeader(null);
-        }
-        if (group != null && group.getGroupLeader() != this) {
-            group.setGroupLeader(this);
-        }
-    }
-
-    public void removeGroup() {
-        this.setGroup(null);
     }
 }

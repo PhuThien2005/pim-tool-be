@@ -69,6 +69,30 @@ public class ProjectRepositoryTest {
     }
 
     @Test
+    public void testSearchProjects_ByKeyword_Substring_Name() {
+        // "BALL" is in the middle/end of "CRYSTAL BALL"
+        SearchProjectCriteria criteria = SearchProjectCriteria.builder()
+                .keyword("BALL")
+                .build();
+        Page<Project> page = projectRepository.searchProjects(criteria, PageRequest.of(0, 10));
+
+        Assert.assertEquals(1, page.getTotalElements());
+        Assert.assertEquals("CRYSTAL BALL", page.getContent().get(0).getName());
+    }
+
+    @Test
+    public void testSearchProjects_ByKeyword_Substring_Customer() {
+        // "lex" is a substring of customer "Rolex" (3 projects in test data)
+        SearchProjectCriteria criteria = SearchProjectCriteria.builder()
+                .keyword("lex")
+                .build();
+        Page<Project> page = projectRepository.searchProjects(criteria, PageRequest.of(0, 10));
+
+        Assert.assertEquals(3, page.getTotalElements());
+        Assert.assertEquals("Rolex", page.getContent().get(0).getCustomer());
+    }
+
+    @Test
     public void testSearchProjects_ByStatus() {
         SearchProjectCriteria criteria = SearchProjectCriteria.builder()
                 .status(ProjectStatus.NEW)
@@ -151,5 +175,42 @@ public class ProjectRepositoryTest {
         Assert.assertNotNull(page);
         Assert.assertEquals(25, page.getTotalElements());
         Assert.assertFalse(page.getContent().isEmpty());
+    }
+
+    @Test
+    public void testSearchProjects_NullCriteria() {
+        Page<Project> page = projectRepository.searchProjects(null, PageRequest.of(0, 10));
+
+        Assert.assertNotNull(page);
+        Assert.assertEquals(25, page.getTotalElements());
+    }
+
+    @Test
+    public void testSearchProjects_NullPageable() {
+        SearchProjectCriteria criteria = new SearchProjectCriteria();
+        Page<Project> page = projectRepository.searchProjects(criteria, null);
+
+        Assert.assertNotNull(page);
+        Assert.assertEquals(25, page.getTotalElements());
+    }
+
+    @Test
+    public void testSearchProjects_Unpaged() {
+        SearchProjectCriteria criteria = new SearchProjectCriteria();
+        Page<Project> page = projectRepository.searchProjects(criteria, org.springframework.data.domain.Pageable.unpaged());
+
+        Assert.assertNotNull(page);
+        Assert.assertEquals(25, page.getTotalElements());
+    }
+
+    @Test
+    public void testSearchProjects_ExplicitProjectNumberDescSort() {
+        SearchProjectCriteria criteria = new SearchProjectCriteria();
+        org.springframework.data.domain.Sort sort = org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "projectNumber");
+        Page<Project> page = projectRepository.searchProjects(criteria, PageRequest.of(0, 5, sort));
+
+        Assert.assertNotNull(page);
+        Assert.assertEquals(25, page.getTotalElements());
+        Assert.assertTrue(page.getContent().get(0).getProjectNumber() > page.getContent().get(1).getProjectNumber());
     }
 }

@@ -19,20 +19,26 @@ import vn.elca.training.model.dto.request.SearchProjectCriteria;
 import vn.elca.training.model.dto.request.UpdateProjectRequest;
 import vn.elca.training.model.dto.response.ProjectDetailResponse;
 import vn.elca.training.model.dto.response.ProjectListResponse;
+import vn.elca.training.model.entity.Employee;
 import vn.elca.training.model.entity.Group;
 import vn.elca.training.model.entity.Project;
 import vn.elca.training.model.entity.ProjectStatus;
+import vn.elca.training.model.exception.GroupNotFoundException;
 import vn.elca.training.model.exception.InvalidProjectStatusException;
 import vn.elca.training.model.exception.ProjectNotFoundException;
 import vn.elca.training.model.exception.ProjectNumberAlreadyExistsException;
+import vn.elca.training.model.exception.VisaNotFoundException;
 import vn.elca.training.repository.EmployeeRepository;
 import vn.elca.training.repository.GroupRepository;
 import vn.elca.training.repository.ProjectRepository;
 import vn.elca.training.service.impl.ProjectServiceImpl;
 
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @RunWith(MockitoJUnitRunner.class)
 public class ProjectServiceTest {
@@ -277,5 +283,142 @@ public class ProjectServiceTest {
         Mockito.when(projectRepository.findById(1L)).thenReturn(java.util.Optional.of(project));
 
         projectService.updateProject(1L, request);
+    }
+
+    @Test
+    public void testGetProject_Success() {
+        ProjectDetailResponse detail = ProjectDetailResponse.builder()
+                .id(1L)
+                .projectNumber(1001)
+                .name("EFV")
+                .build();
+
+        Mockito.when(projectRepository.findDetailById(1L)).thenReturn(java.util.Optional.of(project));
+        Mockito.when(modelMapper.map(project, ProjectDetailResponse.class)).thenReturn(detail);
+
+        ProjectDetailResponse result = projectService.getProject(1L);
+
+        Assert.assertNotNull(result);
+        Assert.assertEquals(1L, result.getId().longValue());
+        Mockito.verify(projectRepository, Mockito.times(1)).findDetailById(1L);
+    }
+
+    @Test(expected = ProjectNotFoundException.class)
+    public void testGetProject_NotFound_ThrowsException() {
+        Mockito.when(projectRepository.findDetailById(999L)).thenReturn(java.util.Optional.empty());
+
+        projectService.getProject(999L);
+    }
+
+    @Test(expected = GroupNotFoundException.class)
+    public void testCreateProject_GroupNotFound_ThrowsException() {
+        CreateProjectRequest request = CreateProjectRequest.builder()
+                .projectNumber(2001)
+                .name("Project")
+                .customer("Customer")
+                .groupId(999L)
+                .startDate(LocalDate.of(2025, 1, 1))
+                .build();
+
+        Mockito.when(projectRepository.existsByProjectNumber(2001)).thenReturn(false);
+        Mockito.when(groupRepository.findById(999L)).thenReturn(java.util.Optional.empty());
+
+        projectService.createProject(request);
+    }
+
+    @Test(expected = VisaNotFoundException.class)
+    public void testCreateProject_VisaNotFound_ThrowsException() {
+        CreateProjectRequest request = CreateProjectRequest.builder()
+                .projectNumber(2001)
+                .name("Project")
+                .customer("Customer")
+                .groupId(1L)
+                .startDate(LocalDate.of(2025, 1, 1))
+                .visas(new HashSet<>(Arrays.asList("UNKNOWN_VISA")))
+                .build();
+
+        Group group = new Group();
+        group.setId(1L);
+
+        Mockito.when(projectRepository.existsByProjectNumber(2001)).thenReturn(false);
+        Mockito.when(groupRepository.findById(1L)).thenReturn(java.util.Optional.of(group));
+        Mockito.when(employeeRepository.findByVisaIn(Mockito.anySet())).thenReturn(Collections.emptyList());
+
+        projectService.createProject(request);
+    }
+
+    @Test
+    public void testCreateProject_WithVisas_Success() {
+        Employee emp = new Employee();
+        emp.setId(10L);
+        emp.setVisa("DTH");
+
+        CreateProjectRequest request = CreateProjectRequest.builder()
+                .projectNumber(2002)
+                .name("Project With Visa")
+                .customer("Customer")
+                .groupId(1L)
+                .startDate(LocalDate.of(2025, 1, 1))
+                .visas(new HashSet<>(Arrays.asList("DTH", " ")))
+                .build();
+
+        Group group = new Group();
+        group.setId(1L);
+
+        ProjectDetailResponse detail = ProjectDetailResponse.builder()
+                .id(20L)
+                .projectNumber(2002)
+                .build();
+
+        Mockito.when(projectRepository.existsByProjectNumber(2002)).thenReturn(false);
+        Mockito.when(groupRepository.findById(1L)).thenReturn(java.util.Optional.of(group));
+        Mockito.when(employeeRepository.findByVisaIn(Mockito.anySet())).thenReturn(Collections.singletonList(emp));
+        Mockito.when(projectRepository.save(Mockito.any(Project.class))).thenAnswer(i -> i.getArgument(0));
+        Mockito.when(modelMapper.map(Mockito.any(Project.class), Mockito.eq(ProjectDetailResponse.class))).thenReturn(detail);
+
+        ProjectDetailResponse result = projectService.createProject(request);
+
+        Assert.assertNotNull(result);
+        Assert.assertEquals(Integer.valueOf(2002), result.getProjectNumber());
+    }
+
+    @Test(expected = ProjectNotFoundException.class)
+    public void testUpdateProject_NotFound_ThrowsException() {
+        UpdateProjectRequest request = UpdateProjectRequest.builder()
+                .version(1L)
+                .build();
+
+        Mockito.when(projectRepository.findById(999L)).thenReturn(java.util.Optional.empty());
+
+        projectService.updateProject(999L, request);
+    }
+
+    @Test(expected = GroupNotFoundException.class)
+    public void testUpdateProject_GroupNotFound_ThrowsException() {
+        project.setVersion(1L);
+        UpdateProjectRequest request = UpdateProjectRequest.builder()
+                .version(1L)
+                .groupId(999L)
+                .build();
+
+        Mockito.when(projectRepository.findById(1L)).thenReturn(java.util.Optional.of(project));
+        Mockito.when(groupRepository.findById(999L)).thenReturn(java.util.Optional.empty());
+
+        projectService.updateProject(1L, request);
+    }
+
+    @Test(expected = ProjectNotFoundException.class)
+    public void testDeleteProject_NotFound_ThrowsException() {
+        Mockito.when(projectRepository.findById(999L)).thenReturn(java.util.Optional.empty());
+
+        projectService.deleteProject(999L);
+    }
+
+    @Test(expected = InvalidProjectStatusException.class)
+    public void testDeleteProject_InvalidStatus_ThrowsException() {
+        project.setStatus(ProjectStatus.INP);
+        Mockito.when(projectRepository.findById(1L)).thenReturn(java.util.Optional.of(project));
+
+        projectService.deleteProject(1L);
     }
 }
