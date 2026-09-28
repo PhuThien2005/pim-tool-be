@@ -63,14 +63,15 @@ public class Project extends AbstractBaseEntity {
         if (this.group == group) {
             return;
         }
-        if (this.group != null && this.group.getProjects() != null) {
+
+        if (this.group != null && org.hibernate.Hibernate.isInitialized(this.group.getProjects())) {
             this.group.getProjects().remove(this);
         }
+
         this.group = group;
-        if (group != null && group.getProjects() != null) {
-            if (!group.getProjects().contains(this)) {
-                group.getProjects().add(this);
-            }
+
+        if (group != null && org.hibernate.Hibernate.isInitialized(group.getProjects())) {
+            group.getProjects().add(this);
         }
     }
 
@@ -79,23 +80,27 @@ public class Project extends AbstractBaseEntity {
     }
 
     public void addEmployee(Employee employee) {
-        if (employee != null) {
-            if (this.employees == null) {
-                this.employees = new HashSet<>();
-            }
-            this.employees.add(employee);
-            if (employee.getProjects() != null) {
-                employee.getProjects().add(this);
-            }
+        if (employee == null) {
+            return;
+        }
+        if (this.employees == null) {
+            this.employees = new HashSet<>();
+        }
+        this.employees.add(employee);
+
+        if (org.hibernate.Hibernate.isInitialized(employee.getProjects())) {
+            employee.getProjects().add(this);
         }
     }
 
     public void removeEmployee(Employee employee) {
-        if (employee != null && this.employees != null) {
-            this.employees.remove(employee);
-            if (employee.getProjects() != null) {
-                employee.getProjects().remove(this);
-            }
+        if (employee == null || this.employees == null) {
+            return;
+        }
+        this.employees.remove(employee);
+
+        if (org.hibernate.Hibernate.isInitialized(employee.getProjects())) {
+            employee.getProjects().remove(this);
         }
     }
 
@@ -110,5 +115,21 @@ public class Project extends AbstractBaseEntity {
                 this.addEmployee(emp);
             }
         }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Project project = (Project) o;
+        if (projectNumber != null && project.projectNumber != null) {
+            return projectNumber.equals(project.projectNumber);
+        }
+        return getId() != null && getId().equals(project.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return projectNumber != null ? projectNumber.hashCode() : getClass().hashCode();
     }
 }

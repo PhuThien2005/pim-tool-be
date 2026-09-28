@@ -28,6 +28,7 @@ import vn.elca.training.repository.ProjectRepository;
 import vn.elca.training.service.ProjectService;
 
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -128,12 +129,13 @@ public class ProjectServiceImpl implements ProjectService {
             return;
         }
 
-        List<Project> projects = projectRepository.findAllById(projectIds);
-        if (projects.size() != projectIds.size()) {
+        List<Long> uniqueIds = projectIds.stream().distinct().collect(Collectors.toList());
+        List<Project> projects = projectRepository.findAllById(uniqueIds);
+        if (projects.size() != uniqueIds.size()) {
             Set<Long> foundIds = projects.stream()
                     .map(Project::getId)
                     .collect(Collectors.toSet());
-            List<Long> notFoundIds = projectIds.stream()
+            List<Long> notFoundIds = uniqueIds.stream()
                     .filter(id -> !foundIds.contains(id))
                     .collect(Collectors.toList());
             throw new ProjectNotFoundException(notFoundIds);
@@ -156,21 +158,21 @@ public class ProjectServiceImpl implements ProjectService {
             return new HashSet<>();
         }
 
-        Set<String> trimmedVisas = visas.stream()
+        Set<String> normalizedVisas = visas.stream()
                 .filter(v -> v != null && !v.trim().isEmpty())
-                .map(String::trim)
+                .map(v -> v.trim().toUpperCase())
                 .collect(Collectors.toSet());
 
-        if (trimmedVisas.isEmpty()) {
+        if (normalizedVisas.isEmpty()) {
             return new HashSet<>();
         }
 
-        List<Employee> foundEmployees = employeeRepository.findByVisaIn(trimmedVisas);
+        List<Employee> foundEmployees = employeeRepository.findByVisaIn(normalizedVisas);
         Set<String> foundVisas = foundEmployees.stream()
-                .map(Employee::getVisa)
+                .map(e -> e.getVisa() != null ? e.getVisa().toUpperCase() : "")
                 .collect(Collectors.toSet());
 
-        List<String> notFoundVisas = trimmedVisas.stream()
+        List<String> notFoundVisas = normalizedVisas.stream()
                 .filter(v -> !foundVisas.contains(v))
                 .sorted()
                 .collect(Collectors.toList());

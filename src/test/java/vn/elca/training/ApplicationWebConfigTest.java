@@ -51,13 +51,14 @@ public class ApplicationWebConfigTest {
         Assert.assertTrue(registrationBean.getUrlMappings().contains("/h2console/*"));
     }
 
-    @Test
-    public void testCorsConfigurer() {
-        WebMvcConfigurer configurer = applicationWebConfig.corsConfigurer();
-        Assert.assertNotNull(configurer);
+    @Autowired
+    private vn.elca.training.config.CorsConfig corsConfig;
 
+    @Test
+    public void testCorsConfig() {
+        Assert.assertNotNull(corsConfig);
         CorsRegistry registry = new CorsRegistry();
-        configurer.addCorsMappings(registry);
+        corsConfig.addCorsMappings(registry);
         // Does not throw exception
     }
 

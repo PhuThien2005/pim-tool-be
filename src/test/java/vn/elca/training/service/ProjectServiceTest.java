@@ -140,6 +140,16 @@ public class ProjectServiceTest {
         Mockito.verify(projectRepository, Mockito.times(1)).deleteAll(projects);
     }
 
+    @Test
+    public void testDeleteProjects_DuplicateIds_Success() {
+        List<Long> duplicateIds = java.util.Arrays.asList(1L, 1L);
+        Mockito.when(projectRepository.findAllById(Collections.singletonList(1L))).thenReturn(Collections.singletonList(project));
+
+        projectService.deleteProjects(duplicateIds);
+
+        Mockito.verify(projectRepository, Mockito.times(1)).deleteAll(Collections.singletonList(project));
+    }
+
     @Test(expected = ProjectNotFoundException.class)
     public void testDeleteProjects_NotFound_ThrowsException() {
         List<Long> ids = java.util.Arrays.asList(1L, 999L);

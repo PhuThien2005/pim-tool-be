@@ -38,6 +38,17 @@ public class SearchProjectCriteriaTest {
     }
 
     @Test
+    public void testToPredicate_LongNumericKeyword_DoesNotThrowNumberFormatException() {
+        SearchProjectCriteria criteria = SearchProjectCriteria.builder()
+                .keyword("1234567890123")
+                .build();
+        Predicate predicate = criteria.toPredicate();
+        Assert.assertNotNull(predicate);
+        Assert.assertFalse(predicate.toString().contains("project.projectNumber ="));
+        Assert.assertTrue(predicate.toString().contains("project.name"));
+    }
+
+    @Test
     public void testToPredicate_StatusFilter() {
         SearchProjectCriteria criteria = SearchProjectCriteria.builder()
                 .status(ProjectStatus.INP)

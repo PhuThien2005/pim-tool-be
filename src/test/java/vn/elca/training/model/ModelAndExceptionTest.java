@@ -285,17 +285,82 @@ public class ModelAndExceptionTest {
         Employee emp1 = new Employee();
         emp1.setId(1L);
         emp1.setVisa("ABC");
+
+        Employee emp2 = new Employee();
+        emp2.setId(2L);
+        emp2.setVisa("abc");
+
+        Employee emp3 = new Employee();
+        emp3.setVisa("XYZ");
+
         Assert.assertEquals(emp1, emp1);
+        Assert.assertEquals(emp1, emp2);
+        Assert.assertNotEquals(emp1, emp3);
+        Assert.assertNotEquals(emp1, null);
+        Assert.assertNotEquals(emp1, "differentType");
+        Assert.assertEquals(emp1.hashCode(), emp2.hashCode());
         Assert.assertNotNull(emp1.toString());
 
         Group grp1 = new Group();
         grp1.setId(1L);
+        Group grp2 = new Group();
+        grp2.setId(1L);
+        Group grp3 = new Group();
+        grp3.setId(2L);
+
         Assert.assertEquals(grp1, grp1);
+        Assert.assertEquals(grp1, grp2);
+        Assert.assertNotEquals(grp1, grp3);
+        Assert.assertNotEquals(grp1, null);
+        Assert.assertEquals(grp1.hashCode(), grp2.hashCode());
         Assert.assertNotNull(grp1.toString());
 
         Project p1 = Project.builder().projectNumber(1001).name("P1").build();
         p1.setId(1L);
+        Project p2 = Project.builder().projectNumber(1001).name("P1 Different Name").build();
+        p2.setId(2L);
+        Project p3 = Project.builder().projectNumber(1002).name("P3").build();
+        p3.setId(3L);
+
         Assert.assertEquals(p1, p1);
+        Assert.assertEquals(p1, p2);
+        Assert.assertNotEquals(p1, p3);
+        Assert.assertNotEquals(p1, null);
+        Assert.assertEquals(p1.hashCode(), p2.hashCode());
         Assert.assertNotNull(p1.toString());
+
+        // Test helper methods with uninitialized / plain collections
+        p1.setGroup(grp1);
+        Assert.assertEquals(grp1, p1.getGroup());
+        p1.setGroup(grp1); // no-op branch
+        p1.setGroup(grp2);
+        p1.removeGroup();
+        Assert.assertNull(p1.getGroup());
+
+        p1.addEmployee(emp1);
+        Assert.assertTrue(p1.getEmployees().contains(emp1));
+        p1.addEmployee(null); // null branch
+        p1.removeEmployee(emp1);
+        Assert.assertFalse(p1.getEmployees().contains(emp1));
+        p1.removeEmployee(null);
+
+        p1.setEmployees(Collections.singleton(emp1));
+        Assert.assertTrue(p1.getEmployees().contains(emp1));
+
+        emp1.addProject(p1);
+        Assert.assertTrue(emp1.getProjects().contains(p1));
+        emp1.removeProject(p1);
+        Assert.assertFalse(emp1.getProjects().contains(p1));
+        emp1.setProjects(Collections.singleton(p1));
+        Assert.assertTrue(emp1.getProjects().contains(p1));
+
+        grp1.addProject(p1);
+        Assert.assertTrue(grp1.getProjects().contains(p1));
+        grp1.removeProject(p1);
+        Assert.assertFalse(grp1.getProjects().contains(p1));
+        grp1.setProjects(Collections.singleton(p1));
+        Assert.assertTrue(grp1.getProjects().contains(p1));
+        grp1.removeGroupLeader();
+        Assert.assertNull(grp1.getGroupLeader());
     }
 }

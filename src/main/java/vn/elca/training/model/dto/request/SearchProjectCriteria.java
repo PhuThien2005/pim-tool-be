@@ -61,7 +61,7 @@ public class SearchProjectCriteria {
         String kw = StringUtils.isNotBlank(keyword) ? keyword.trim() : null;
         BooleanExpression keywordExp = (kw == null) ? null : p.name.containsIgnoreCase(kw)
                 .or(p.customer.containsIgnoreCase(kw))
-                .or(StringUtils.isNumeric(kw) ? p.projectNumber.eq(Integer.parseInt(kw)) : null);
+                .or(StringUtils.isNumeric(kw) && kw.length() <= 4 ? p.projectNumber.eq(Integer.parseInt(kw)) : null);
         BooleanBuilder membersExp = new BooleanBuilder();
         if (memberVisas != null && !memberVisas.isEmpty()) {
             for (String visa : memberVisas) {

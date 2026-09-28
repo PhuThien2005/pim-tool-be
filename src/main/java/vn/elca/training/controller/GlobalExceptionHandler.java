@@ -58,7 +58,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex, Locale locale) {
-        if (ex.getMessage() != null && (ex.getMessage().contains("PROJECT_NUMBER") || ex.getMessage().contains("23505"))) {
+        Throwable rootCause = org.springframework.core.NestedExceptionUtils.getMostSpecificCause(ex);
+        String msg = (rootCause != null && rootCause.getMessage() != null ? rootCause.getMessage() : "")
+                + " " + (ex.getMessage() != null ? ex.getMessage() : "");
+        String upperMsg = msg.toUpperCase();
+        if (upperMsg.contains("PROJECT_NUMBER") || upperMsg.contains("23505") || upperMsg.contains("UK_LU0HN5S04GTK9WKXS6729W9O9")) {
             return handleBusinessException(new BusinessException(CommonErrorCode.PROJECT_NUMBER_ALREADY_EXISTS), locale);
         }
         return buildError(HttpStatus.BAD_REQUEST, CommonErrorCode.DATA_INTEGRITY_VIOLATION.name(), "Database constraint violation", null);

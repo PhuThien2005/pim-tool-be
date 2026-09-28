@@ -50,7 +50,7 @@ public class Employee extends AbstractBaseEntity {
                 this.projects = new HashSet<>();
             }
             this.projects.add(project);
-            if (project.getEmployees() != null) {
+            if (org.hibernate.Hibernate.isInitialized(project.getEmployees())) {
                 project.getEmployees().add(this);
             }
         }
@@ -59,7 +59,7 @@ public class Employee extends AbstractBaseEntity {
     public void removeProject(Project project) {
         if (project != null && this.projects != null) {
             this.projects.remove(project);
-            if (project.getEmployees() != null) {
+            if (org.hibernate.Hibernate.isInitialized(project.getEmployees())) {
                 project.getEmployees().remove(this);
             }
         }
@@ -76,5 +76,18 @@ public class Employee extends AbstractBaseEntity {
                 this.addProject(prj);
             }
         }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Employee employee = (Employee) o;
+        return visa != null && visa.equalsIgnoreCase(employee.visa);
+    }
+
+    @Override
+    public int hashCode() {
+        return visa != null ? visa.toUpperCase().hashCode() : getClass().hashCode();
     }
 }
