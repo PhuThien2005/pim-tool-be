@@ -1,6 +1,6 @@
 # Tổng Hợp Toàn Bộ Test Suite - Dự Án PIM Tool (pilot-project-back)
 
-Tài liệu này tổng hợp chi tiết toàn bộ các bộ kiểm thử (Test Suites) hiện có trong dự án backend `pilot-project-back`. Toàn bộ **147 test cases** đều được thực thi tự động qua Maven (`mvn clean test jacoco:report`) và đạt tỷ lệ thành công tuyệt đối **100% (147 passed, 0 failures, 0 errors, 0 skipped)** với độ phủ kiểm thử vượt chuẩn công nghiệp: **Line Coverage: 97.6% (691/708 lines)** và **Branch Coverage: 87.5% (259/296 branches)**.
+Tài liệu này tổng hợp chi tiết toàn bộ các bộ kiểm thử (Test Suites) hiện có trong dự án backend `pilot-project-back`. Toàn bộ **148 test cases** đều được thực thi tự động qua Maven (`mvn clean test jacoco:report`) và đạt tỷ lệ thành công tuyệt đối **100% (148 passed, 0 failures, 0 errors, 0 skipped)** với độ phủ kiểm thử vượt chuẩn công nghiệp: **Line Coverage: 97.5% (702/720 lines)** và **Branch Coverage: 87.6% (268/306 branches)**.
 
 ---
 
@@ -26,7 +26,7 @@ Hệ thống test được tổ chức phân tầng rõ ràng theo mô hình Tes
                   └─────────────────────────────────────────┘
 ```
 
-### Bảng Thống Kê Tổng Hợp (18 Test Classes - 147 Test Cases)
+### Bảng Thống Kê Tổng Hợp (18 Test Classes - 148 Test Cases)
 
 | STT | Test Class | Tầng (Layer) | Công nghệ / Framework | Số lượng Test | Kết quả |
 |---|---|---|---|:---:|:---:|
@@ -40,7 +40,7 @@ Hệ thống test được tổ chức phân tầng rõ ràng theo mô hình Tes
 | 8 | [`GroupServiceTest`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/test/java/vn/elca/training/service/GroupServiceTest.java) | Business Logic (Service) | JUnit 4, Mockito, ModelMapper | 1 | PASS (100%) |
 | 9 | [`ProjectRepositoryTest`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/test/java/vn/elca/training/repository/ProjectRepositoryTest.java) | Data Access (Repository) | Spring Boot Test, JPA, H2 In-Memory | 17 | PASS (100%) |
 | 10 | [`ProjectExecutionPlanTest`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/test/java/vn/elca/training/repository/ProjectExecutionPlanTest.java) | Database & Indexing Plan | Spring Boot Test, EXPLAIN ANALYZE, P6Spy | 8 | PASS (100%) |
-| 11 | [`SearchProjectCriteriaTest`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/test/java/vn/elca/training/model/dto/request/SearchProjectCriteriaTest.java) | Criteria / QueryDSL | JUnit 4, QueryDSL | 8 | PASS (100%) |
+| 11 | [`SearchProjectCriteriaTest`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/test/java/vn/elca/training/model/dto/request/SearchProjectCriteriaTest.java) | Criteria / QueryDSL | JUnit 4, QueryDSL | 9 | PASS (100%) |
 | 12 | [`QueryDslModelTest`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/test/java/vn/elca/training/model/entity/QueryDslModelTest.java) | QueryDSL Generated Models | JUnit 4, QueryDSL Path Metadata | 6 | PASS (100%) |
 | 13 | [`ModelAndExceptionTest`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/test/java/vn/elca/training/model/ModelAndExceptionTest.java) | Entities, DTOs & Exceptions | JUnit 4, Reflection | 10 | PASS (100%) |
 | 14 | [`StartBeforeEndDateValidatorTest`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/test/java/vn/elca/training/validator/StartBeforeEndDateValidatorTest.java) | Validation (Cross-field Date) | JUnit 4, Mockito, Bean Validation | 7 | PASS (100%) |
@@ -48,7 +48,7 @@ Hệ thống test được tổ chức phân tầng rõ ràng theo mô hình Tes
 | 16 | [`VisaValidatorTest`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/test/java/vn/elca/training/validator/VisaValidatorTest.java) | Validation (Single Visa) | JUnit 4, Bean Validation | 5 | PASS (100%) |
 | 17 | [`P6SpySqlFormatterTest`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/test/java/vn/elca/training/util/P6SpySqlFormatterTest.java) | Utility / SQL Formatter | JUnit 4 | 3 | PASS (100%) |
 | 18 | [`ApplicationWebConfigTest`](file:///C:/Users/dptn/IdeaProjects/pilot-project-back/src/test/java/vn/elca/training/ApplicationWebConfigTest.java) | Configuration & Web Context | Spring Boot Test, Web Application Context | 7 | PASS (100%) |
-| **Tổng** | **18 Test Classes** | **Toàn bộ các tầng kiến trúc** | **JUnit 4 / Spring Boot / Mockito** | **147** | **PASS (100%)** |
+| **Tổng** | **18 Test Classes** | **Toàn bộ các tầng kiến trúc** | **JUnit 4 / Spring Boot / Mockito** | **148** | **PASS (100%)** |
 
 ---
 

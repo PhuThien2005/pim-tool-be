@@ -1,7 +1,9 @@
 package vn.elca.training.repository.custom;
 
+import com.querydsl.core.types.Predicate;
 import com.querydsl.core.types.dsl.PathBuilder;
 import com.querydsl.jpa.impl.JPAQuery;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -25,9 +27,23 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
     @Override
     public Page<Project> searchProjects(SearchProjectCriteria criteria, Pageable pageable) {
         QProject p = QProject.project;
-        JPAQuery<Project> dataQuery = new JPAQuery<Project>(em)
-                .from(p)
-                .where(criteria != null ? criteria.toPredicate() : null);
+        QGroup g = QGroup.group;
+        QEmployee leader = new QEmployee("groupLeader");
+
+        boolean hasLeaderFilter = criteria != null && StringUtils.isNotBlank(criteria.getLeaderVisa());
+
+        JPAQuery<Project> dataQuery = new JPAQuery<Project>(em).from(p);
+        JPAQuery<Long> countQuery = new JPAQuery<Long>(em).select(p.id.count()).from(p);
+
+        if (hasLeaderFilter) {
+            dataQuery.innerJoin(p.group, g).innerJoin(g.groupLeader, leader);
+            countQuery.innerJoin(p.group, g).innerJoin(g.groupLeader, leader);
+        }
+
+        Predicate predicate = criteria != null ? criteria.toPredicate(p, hasLeaderFilter ? leader : null) : null;
+        dataQuery.where(predicate);
+        countQuery.where(predicate);
+
         Sort sort = (pageable != null) ? pageable.getSort() : Sort.unsorted();
         if (sort.getOrderFor("projectNumber") == null) {
             sort = sort.and(Sort.by(Sort.Direction.ASC, "projectNumber"));
@@ -38,10 +54,7 @@ public class ProjectRepositoryImpl implements ProjectRepositoryCustom {
             dataQuery.offset(pageable.getOffset()).limit(pageable.getPageSize());
         }
         List<Project> content = dataQuery.fetch();
-        JPAQuery<Long> countQuery = new JPAQuery<Long>(em)
-                .select(p.id.count())
-                .from(p)
-                .where(criteria != null ? criteria.toPredicate() : null);
+
         return PageableExecutionUtils.getPage(
                 content,
                 pageable != null ? pageable : Pageable.unpaged(),

@@ -7,6 +7,7 @@ import lombok.*;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.format.annotation.DateTimeFormat;
 import vn.elca.training.model.entity.ProjectStatus;
+import vn.elca.training.model.entity.QEmployee;
 import vn.elca.training.model.entity.QProject;
 import vn.elca.training.validator.annotation.StartBeforeEndDate;
 import vn.elca.training.validator.annotation.ValidVisa;
@@ -57,7 +58,13 @@ public class SearchProjectCriteria {
     private LocalDate endDateTo;
 
     public Predicate toPredicate() {
-        QProject p = QProject.project;
+        return toPredicate(QProject.project, null);
+    }
+
+    public Predicate toPredicate(QProject p, QEmployee leader) {
+        if (p == null) {
+            p = QProject.project;
+        }
         String kw = StringUtils.isNotBlank(keyword) ? keyword.trim() : null;
         BooleanExpression keywordExp = (kw == null) ? null : p.name.containsIgnoreCase(kw)
                 .or(p.customer.containsIgnoreCase(kw))
@@ -71,10 +78,20 @@ public class SearchProjectCriteria {
             }
         }
 
+        BooleanExpression leaderExp = null;
+        if (StringUtils.isNotBlank(leaderVisa)) {
+            String trimmedVisa = leaderVisa.trim();
+            if (leader != null) {
+                leaderExp = leader.visa.equalsIgnoreCase(trimmedVisa);
+            } else {
+                leaderExp = p.group.groupLeader.visa.equalsIgnoreCase(trimmedVisa);
+            }
+        }
+
         return new BooleanBuilder()
                 .and(keywordExp)
                 .and(status != null ? p.status.eq(status) : null)
-                .and(StringUtils.isNotBlank(leaderVisa) ? p.group.groupLeader.visa.equalsIgnoreCase(leaderVisa.trim()) : null)
+                .and(leaderExp)
                 .and(membersExp)
                 .and(startDateFrom != null ? p.startDate.goe(startDateFrom) : null)
                 .and(startDateTo != null ? p.startDate.loe(startDateTo) : null)

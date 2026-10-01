@@ -69,6 +69,17 @@ public class SearchProjectCriteriaTest {
     }
 
     @Test
+    public void testToPredicate_LeaderVisaFilter_WithExplicitLeader() {
+        SearchProjectCriteria criteria = SearchProjectCriteria.builder()
+                .leaderVisa("DTH")
+                .build();
+        vn.elca.training.model.entity.QEmployee leader = new vn.elca.training.model.entity.QEmployee("groupLeader");
+        Predicate predicate = criteria.toPredicate(null, leader);
+        Assert.assertNotNull(predicate);
+        Assert.assertTrue(predicate.toString().toLowerCase().contains("groupleader.visa"));
+    }
+
+    @Test
     public void testToPredicate_MemberVisaFilter() {
         SearchProjectCriteria criteria = SearchProjectCriteria.builder()
                 .memberVisas(java.util.Collections.singleton("BHU"))

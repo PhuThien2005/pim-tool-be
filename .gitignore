@@ -54,3 +54,6 @@ target
 
 # FastRequest plugin
 .fastRequest/
+
+# Coverage reports
+htmlReport/
